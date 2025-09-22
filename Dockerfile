@@ -1,83 +1,65 @@
-# Kosera API Dockerfile
+# Kosera API Dockerfile (Revisi)
 # Multi-stage build for development and production
 
-# Base stage with Node.js
-FROM node:22-alpine AS base
+# =============================================
+# Base/Builder Stage
+# Menggunakan 'slim' yang berbasis Debian (glibc) untuk kompatibilitas
+# =============================================
+FROM node:22-slim AS builder
 WORKDIR /app
 
-# Install dependencies only when needed
-FROM base AS deps
-# Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
-RUN apk add --no-cache libc6-compat
-
-# Copy package files
+# Copy package files dan install semua dependensi
 COPY package.json package-lock.json* ./
-
-# Install dependencies
-RUN npm ci --only=production && npm cache clean --force
-
-# Development stage
-FROM base AS dev
-RUN apk add --no-cache libc6-compat
-
-# Copy package files
-COPY package.json package-lock.json* ./
-
-# Install all dependencies (including devDependencies)
 RUN npm ci
 
-# Copy source code
+# Copy sisa source code
 COPY . .
 
-ENV TERM xterm-256color
-
-# Expose port
-EXPOSE 3000
-
-# Start development server
-CMD ["npm", "run", "dev"]
-
-# Builder stage for production
-FROM base AS builder
-RUN apk add --no-cache libc6-compat
-
-# Copy package files
-COPY package.json package-lock.json* ./
-
-# Install all dependencies
-RUN npm ci
-
-# Copy source code
-COPY . .
-
-# Generate Prisma client (if using Prisma)
-# RUN npx prisma generate
-
-# Build the application
+# Build aplikasi untuk production
 RUN npm run build
 
-# Production stage
-FROM base AS production
-RUN apk add --no-cache libc6-compat
+# =============================================
+# Development Stage
+# Stage ini hanya akan digunakan saat menjalankan 'docker compose up'
+# =============================================
+FROM node:22-slim AS dev
+WORKDIR /app
 
-# Create non-root user
+# Copy package files dan install semua dependensi (termasuk devDependencies)
+COPY package.json package-lock.json* ./
+RUN npm ci
+
+# Copy sisa source code
+COPY . .
+
+# Port default Next.js
+EXPOSE 3000
+
+# Perintah untuk memulai server development
+CMD ["npm", "run", "dev"]
+
+# =============================================
+# Production Stage
+# Stage final yang ramping untuk deployment
+# =============================================
+FROM node:22-slim AS production
+WORKDIR /app
+
+# Buat user non-root untuk keamanan
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Copy built application
-# First, copy public directory directly from source (not from builder)
-COPY public/ ./public/
+# Copy hanya file yang dibutuhkan dari builder stage
+COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+# Jika ada file lain yang dibutuhkan, copy di sini
+# COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
 
-# Switch to non-root user
 USER nextjs
 
-# Expose port
 EXPOSE 3000
+ENV PORT 3000
 
-ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
-
-# Start the application
+# Perintah untuk menjalankan aplikasi production
 CMD ["node", "server.js"]
