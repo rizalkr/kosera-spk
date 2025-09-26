@@ -8,6 +8,8 @@ import { BookingStatusDropdown } from '@/components/features/dashboard/bookings/
 import { clsx } from 'clsx';
 import { showError, showConfirm, showToast } from '@/lib/sweetalert';
 import type { AdminBookingData } from '@/types';
+import { BookingHistoryModal } from '@/components/modals/BookingHistoryModal';
+import { useAdminBookingHistory } from '@/hooks/admin/useAdminBookingHistory';
 
 
 export default function BookingAdminClient() {
@@ -79,6 +81,23 @@ export default function BookingAdminClient() {
     } finally {
       setUpdatingId(null);
     }
+  };
+
+  // History modal state
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [selectedBookingId, setSelectedBookingId] = useState<number | null>(null);
+  const history = useAdminBookingHistory();
+
+  const openHistory = async (bookingId: number) => {
+    setSelectedBookingId(bookingId);
+    setHistoryOpen(true);
+    await history.fetch(bookingId);
+  };
+
+  const closeHistory = () => {
+    setHistoryOpen(false);
+    setSelectedBookingId(null);
+    history.reset();
   };
 
   return (
@@ -188,6 +207,7 @@ export default function BookingAdminClient() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Check-Out</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Total Price</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Created</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -232,6 +252,14 @@ export default function BookingAdminClient() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{booking.checkOutDate}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Rp {booking.totalPrice.toLocaleString('id-ID')}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-500">{booking.createdAt}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <button
+                      onClick={() => openHistory(booking.id)}
+                      className="px-3 py-1 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                    >
+                      View History
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -266,6 +294,14 @@ export default function BookingAdminClient() {
           </div>
         </div>
       )}
+      <BookingHistoryModal
+        isOpen={historyOpen}
+        onClose={closeHistory}
+        bookingId={selectedBookingId}
+        loading={history.loading}
+        error={history.error}
+        items={history.data}
+      />
     </div>
   );
 };

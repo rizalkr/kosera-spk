@@ -115,3 +115,20 @@ export interface BookingApiResponse {
   data?: { booking: BookingDetailData };
   error?: string;
 }
+
+export interface AdminBookingHistoryItem {
+  id: number;
+  previousStatus: BookingStatus;
+  newStatus: BookingStatus;
+  notes?: string;
+  createdAt: string; // ISO timestamp
+  changedBy: {
+    id: number;
+    name: string;
+    username: string;
+  } | null;
+}
+
+export interface AdminBookingHistoryResponse {
+  items: AdminBookingHistoryItem[];
+}

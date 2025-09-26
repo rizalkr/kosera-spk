@@ -29,6 +29,13 @@
       "when": 1756349795622,
       "tag": "0003_nifty_hellfire_club",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1758888136021,
+      "tag": "0004_careless_wendell_vaughn",
+      "breakpoints": true
     }
   ]
 }

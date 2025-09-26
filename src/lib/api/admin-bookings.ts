@@ -1,6 +1,6 @@
 import { apiClient } from './client';
 import type { ApiResponse } from '@/types';
-import type { AdminBookingData, AdminBookingFilters } from '@/types';
+import type { AdminBookingData, AdminBookingFilters, AdminBookingHistoryResponse } from '@/types';
 
 export interface AdminBookingResponse {
   bookings: AdminBookingData[];
@@ -43,5 +43,14 @@ export const adminBookingsApi = {
     data: UpdateBookingStatusData
   ): Promise<ApiResponse<AdminBookingData>> => {
     return apiClient.patch(`/api/admin/bookings/${bookingId}`, data);
+  },
+
+  /**
+   * Get booking status change history for a given booking
+   */
+  getBookingHistory: async (
+    bookingId: number
+  ): Promise<ApiResponse<AdminBookingHistoryResponse>> => {
+    return apiClient.get(`/api/admin/bookings/${bookingId}/history`);
   },
 };
