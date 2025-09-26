@@ -1,7 +1,7 @@
 import { requireAdmin } from '@/lib/server-auth';
 import type { ServerAuthResult } from '@/lib/server-auth';
 import { db } from '@/db';
-import { bookings } from '@/db/schema';
+import { bookings, bookingStatusHistory } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { ok, fail } from '@/types/api';
@@ -54,6 +54,14 @@ export async function PATCH(
 
   try {
     const payload = body as z.infer<typeof updateBookingStatusSchema>;
+    // Fetch current booking to get previous status
+    const current = await db.select({ id: bookings.id, status: bookings.status }).from(bookings).where(eq(bookings.id, bookingId)).limit(1);
+    if (current.length === 0) {
+      return fail('not_found', 'Booking not found', undefined, { status: 404 });
+    }
+    const previousStatus = current[0].status;
+
+    // Update booking and insert audit log in a simple transactional sequence
     const [updatedBooking] = await db
       .update(bookings)
       .set({
@@ -68,11 +76,27 @@ export async function PATCH(
       return fail('not_found', 'Booking not found', undefined, { status: 404 });
     }
 
+    // Create audit log
+    const adminId = auth.user?.userId ?? null;
+    await db.insert(bookingStatusHistory).values({
+      bookingId: updatedBooking.id,
+      adminId: adminId ?? undefined,
+      previousStatus,
+      newStatus: payload.status,
+      notes: payload.notes,
+    });
+
+    if (!updatedBooking) {
+      return fail('not_found', 'Booking not found', undefined, { status: 404 });
+    }
+
     return ok('Booking status updated', {
       id: updatedBooking.id,
       status: updatedBooking.status,
       notes: updatedBooking.notes,
       updatedAt: updatedBooking.updatedAt,
+      updatedBy: auth.user?.userId,
+      previousStatus,
     });
   } catch (error) {
     console.error('Admin update booking status error:', error);

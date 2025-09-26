@@ -2,16 +2,16 @@
 import { Swiper, SwiperSlide } from 'swiper/react';
 import 'swiper/css';
 import FeaturedCard from '@/components/ui/FeaturedCard';
-import { useKosRecommendations } from '@/hooks/useApi';
+import { useKosFeatured } from '@/hooks/useApi';
 import { PublicKosData } from '@/types';
 
 export default function RecommendationCarousel() {
-  const { data, isLoading, error } = useKosRecommendations({ limit: 6 });
+  const { data, isLoading, error } = useKosFeatured();
 
   if (isLoading) {
     return (
       <div>
-        <h2 className="text-2xl font-semibold mb-4 text-black">Rekomendasi</h2>
+        <h2 className="text-2xl font-semibold mb-4 text-black">Featured</h2>
         <div className="animate-pulse">
           <div className="bg-[#E1F6F2] border border-blue-100 rounded-xl p-4">
             <div className="flex gap-4">
@@ -31,7 +31,7 @@ export default function RecommendationCarousel() {
   if (error) {
     return (
       <div>
-        <h2 className="text-2xl font-semibold mb-4 text-black">Rekomendasi</h2>
+        <h2 className="text-2xl font-semibold mb-4 text-black">Featured</h2>
         <div className="text-center text-red-500 py-4">
           <p className="text-sm">Gagal memuat rekomendasi</p>
         </div>
@@ -39,12 +39,18 @@ export default function RecommendationCarousel() {
     );
   }
 
-  const recommendations = data?.data?.results || [];
+  // Handle both legacy and new envelope shapes for featured API
+  interface LegacyShape { success: boolean; data?: PublicKosData[] }
+  interface NewShape { success: boolean; data?: { items?: PublicKosData[]; count?: number } }
+  const envelope: (LegacyShape | NewShape) | undefined = (data && typeof data === 'object') ? (data as LegacyShape | NewShape) : undefined;
+  const recommendations: PublicKosData[] = Array.isArray((envelope as LegacyShape)?.data)
+    ? ((envelope as LegacyShape).data as PublicKosData[])
+    : (Array.isArray((envelope as NewShape)?.data?.items) ? ((envelope as NewShape).data?.items as PublicKosData[]) : []);
 
   if (recommendations.length === 0) {
     return (
       <div>
-        <h2 className="text-2xl font-semibold mb-4 text-black">Rekomendasi</h2>
+        <h2 className="text-2xl font-semibold mb-4 text-black">Featured</h2>
         <div className="text-center text-gray-500 py-4">
           <p className="text-sm">Belum ada rekomendasi tersedia</p>
         </div>
@@ -54,7 +60,7 @@ export default function RecommendationCarousel() {
 
   return (
     <div>
-      <h2 className="text-2xl font-semibold mb-4 text-black">Rekomendasi</h2>
+      <h2 className="text-2xl font-semibold mb-4 text-black">Featured</h2>
       <Swiper 
         spaceBetween={16} 
         slidesPerView={1} 

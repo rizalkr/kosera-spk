@@ -14,10 +14,10 @@ export const GET = withAuth(async (request: AuthenticatedRequest) => {
       db
         .select({
           totalKos: count(),
-          totalViews: sql<number>`COALESCE(sum(${posts.viewCount}), 0)`,
-          totalFavorites: sql<number>`COALESCE(sum(${posts.favoriteCount}), 0)`,
-          averageRating: sql<number>`COALESCE(avg(${posts.averageRating}), 0)`,
-          totalReviews: sql<number>`COALESCE(sum(${posts.reviewCount}), 0)`,
+          totalViews: sql<number>`COALESCE(sum(${posts.viewCount})::double precision, 0)`,
+          totalFavorites: sql<number>`COALESCE(sum(${posts.favoriteCount})::double precision, 0)`,
+          averageRating: sql<number>`COALESCE(avg(${posts.averageRating})::double precision, 0)`,
+          totalReviews: sql<number>`COALESCE(sum(${posts.reviewCount})::double precision, 0)`,
         })
         .from(kos)
         .innerJoin(posts, eq(kos.postId, posts.id)),
@@ -33,12 +33,12 @@ export const GET = withAuth(async (request: AuthenticatedRequest) => {
             averageRating: posts.averageRating,
             reviewCount: posts.reviewCount,
             qualityScore: sql<number>`(
-            (CAST(${posts.averageRating} AS DECIMAL) * 0.4) +
-            (${posts.reviewCount} * 0.2) +
-            (${posts.favoriteCount} * 0.2) +
-            (${posts.photoCount} * 0.1) +
-            (${posts.viewCount} * 0.1)
-          )`,
+            ((${posts.averageRating})::double precision * 0.4) +
+            ((${posts.reviewCount})::double precision * 0.2) +
+            ((${posts.favoriteCount})::double precision * 0.2) +
+            ((${posts.photoCount})::double precision * 0.1) +
+            ((${posts.viewCount})::double precision * 0.1)
+          )::double precision`,
             owner: { name: users.name, username: users.username },
         })
         .from(kos)
@@ -47,12 +47,12 @@ export const GET = withAuth(async (request: AuthenticatedRequest) => {
         .orderBy(
           desc(
             sql`(
-          (CAST(${posts.averageRating} AS DECIMAL) * 0.4) +
-          (${posts.reviewCount} * 0.2) +
-          (${posts.favoriteCount} * 0.2) +
-          (${posts.photoCount} * 0.1) +
-          (${posts.viewCount} * 0.1)
-        )`
+          ((${posts.averageRating})::double precision * 0.4) +
+          ((${posts.reviewCount})::double precision * 0.2) +
+          ((${posts.favoriteCount})::double precision * 0.2) +
+          ((${posts.photoCount})::double precision * 0.1) +
+          ((${posts.viewCount})::double precision * 0.1)
+        )::double precision`
           )
         )
         .limit(10),
@@ -60,8 +60,8 @@ export const GET = withAuth(async (request: AuthenticatedRequest) => {
         .select({
           city: kos.city,
           kosCount: count(),
-          averagePrice: sql<number>`avg(${posts.price})`,
-          totalViews: sql<number>`sum(${posts.viewCount})`,
+          averagePrice: sql<number>`COALESCE(avg(${posts.price})::double precision, 0)`,
+          totalViews: sql<number>`COALESCE(sum(${posts.viewCount})::double precision, 0)`,
         })
         .from(kos)
         .innerJoin(posts, eq(kos.postId, posts.id))
@@ -69,18 +69,18 @@ export const GET = withAuth(async (request: AuthenticatedRequest) => {
         .orderBy(desc(count())),
       db
         .select({
-          minPrice: sql<number>`min(${posts.price})`,
-          maxPrice: sql<number>`max(${posts.price})`,
-          averagePrice: sql<number>`avg(${posts.price})`,
-          medianPrice: sql<number>`percentile_cont(0.5) within group (order by ${posts.price})`,
+          minPrice: sql<number>`COALESCE(min(${posts.price})::double precision, 0)`,
+          maxPrice: sql<number>`COALESCE(max(${posts.price})::double precision, 0)`,
+          averagePrice: sql<number>`COALESCE(avg(${posts.price})::double precision, 0)`,
+          medianPrice: sql<number>`COALESCE((percentile_cont(0.5) within group (order by ${posts.price}))::double precision, 0)`,
         })
         .from(posts)
         .innerJoin(kos, eq(posts.id, kos.postId)),
       db
         .select({
           totalFeatured: count(),
-          averageFeaturedViews: sql<number>`COALESCE(avg(${posts.viewCount}), 0)`,
-          averageFeaturedRating: sql<number>`COALESCE(avg(${posts.averageRating}), 0)`,
+          averageFeaturedViews: sql<number>`COALESCE(avg(${posts.viewCount})::double precision, 0)`,
+          averageFeaturedRating: sql<number>`COALESCE(avg(${posts.averageRating})::double precision, 0)`,
         })
         .from(posts)
         .innerJoin(kos, eq(posts.id, kos.postId))

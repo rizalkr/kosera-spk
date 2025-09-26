@@ -105,6 +105,17 @@ export const bookings = pgTable('bookings', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+// Booking status change history (audit log)
+export const bookingStatusHistory = pgTable('booking_status_history', {
+  id: serial('id').primaryKey(),
+  bookingId: integer('booking_id').references(() => bookings.id, { onDelete: 'cascade' }).notNull(),
+  adminId: integer('admin_id').references(() => users.id, { onDelete: 'set null' }),
+  previousStatus: text('previous_status').notNull(),
+  newStatus: text('new_status').notNull(),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -126,3 +137,6 @@ export type NewKosPhoto = typeof kosPhotos.$inferInsert;
 
 export type Booking = typeof bookings.$inferSelect;
 export type NewBooking = typeof bookings.$inferInsert;
+
+export type BookingStatusHistory = typeof bookingStatusHistory.$inferSelect;
+export type NewBookingStatusHistory = typeof bookingStatusHistory.$inferInsert;

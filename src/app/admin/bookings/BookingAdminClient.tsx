@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useAdminBooking } from '@/hooks/admin/useAdminBooking';
 import { useDebounce } from '@/hooks/useDebounce';
 import { AdminBookingStatus, useAdminUpdateBookingStatus } from '@/hooks/admin/useAdminUpdateBookingStatus';
@@ -24,14 +24,16 @@ export default function BookingAdminClient() {
   const debouncedStartDate = useDebounce(startDate, 300);
   const debouncedEndDate = useDebounce(endDate, 300);
 
-  const { data: bookings, loading, error, pagination, refetch } = useAdminBooking({
+  const bookingFilters = useMemo(() => ({
     page: currentPage,
     limit: bookingsPerPage,
     status: debouncedStatus !== 'all' ? debouncedStatus : undefined,
     startDate: debouncedStartDate || undefined,
     endDate: debouncedEndDate || undefined,
     searchQuery: debouncedSearchQuery || undefined,
-  });
+  }), [currentPage, bookingsPerPage, debouncedStatus, debouncedStartDate, debouncedEndDate, debouncedSearchQuery]);
+
+  const { data: bookings, loading, error, pagination, refetch } = useAdminBooking(bookingFilters);
 
   // Using unified API client
   const { trigger: updateStatus, isMutating } = useAdminUpdateBookingStatus();

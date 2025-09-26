@@ -20,7 +20,7 @@ export function AdminKosFilter({ initialFilters, onFilterChange }: AdminKosFilte
 
   return (
     <div className="bg-white rounded-lg shadow p-6 mb-6">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-500 mb-2">
             Cari Kos {isSearching && <span className="text-blue-500 text-xs">(mencari...)</span>}
@@ -58,6 +58,18 @@ export function AdminKosFilter({ initialFilters, onFilterChange }: AdminKosFilte
             <option value="all">Semua Owner</option>
             <option value="seller">Seller</option>
             <option value="admin">Admin</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-500 mb-2">Featured</label>
+          <select
+            value={initialFilters.featured || 'all'}
+            onChange={(e) => onFilterChange({ featured: e.target.value as 'all' | 'true' | 'false' })}
+            className="w-full px-3 py-2 text-gray-700 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600"
+          >
+            <option value="all">Semua</option>
+            <option value="true">Featured saja</option>
+            <option value="false">Tidak featured</option>
           </select>
         </div>
         <div>

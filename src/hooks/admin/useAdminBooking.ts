@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { adminBookingsApi } from '@/lib/api/admin-bookings';
 import { ApiError } from '@/lib/api/client';
 import type { AdminBookingData, AdminBookingFilters } from '@/types';
@@ -19,12 +19,15 @@ export const useAdminBooking = (filters: AdminBookingFilters = {}) => {
     hasPrevPage: false,
   });
 
+  const stableKey = useMemo(() => JSON.stringify(filters), [filters]);
+
   const fetchAdminBooking = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const result = await adminBookingsApi.getBookings(filters);
+      const parsedFilters: AdminBookingFilters = stableKey ? JSON.parse(stableKey) : {};
+      const result = await adminBookingsApi.getBookings(parsedFilters);
       
       if (!result.success) {
         throw new Error(result.error || 'Failed to fetch bookings data');
@@ -50,7 +53,7 @@ export const useAdminBooking = (filters: AdminBookingFilters = {}) => {
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [stableKey]);
 
   const refetch = useCallback(() => {
     fetchAdminBooking();

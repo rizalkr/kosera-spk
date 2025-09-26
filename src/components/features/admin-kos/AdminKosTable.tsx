@@ -112,6 +112,7 @@ export function AdminKosTable({
             isPermanentDeleting={isPermanentDeleting}
             onRestore={handleRestore}
             onDelete={(id) => handleSingleDelete(id)}
+            onActionComplete={onActionComplete}
           />
         )}
       />

@@ -145,6 +145,11 @@ export interface AdminKosFilters {
   ownerType?: string;
   sortBy?: string;
   showDeleted?: boolean; // New parameter for archive view
+  /**
+   * Filter featured state: 'all' shows everything, 'true' shows only featured,
+   * 'false' shows only non-featured. Stored as string to align with URLSearchParams.
+   */
+  featured?: 'all' | 'true' | 'false';
 }
 
 export type AdminKosApiResponse = PaginatedResponse<AdminKosData>;

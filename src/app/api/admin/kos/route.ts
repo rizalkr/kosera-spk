@@ -12,7 +12,8 @@ async function getAdminKosHandler(request: AuthenticatedRequest) {
     const search = searchParams.get('search') || '';
     const city = searchParams.get('city') || '';
     const status = searchParams.get('status') || ''; // active, inactive, all
-    const ownerType = searchParams.get('ownerType') || ''; // seller, admin, all
+  const ownerType = searchParams.get('ownerType') || ''; // seller, admin, all
+  const featured = searchParams.get('featured') || 'all'; // 'all' | 'true' | 'false'
     const sortBy = searchParams.get('sortBy') || 'newest'; // newest, oldest, price_asc, price_desc, popular
     const showDeleted = searchParams.get('showDeleted') === 'true';
     
@@ -56,6 +57,13 @@ async function getAdminKosHandler(request: AuthenticatedRequest) {
       } else if (ownerType === 'admin') {
         conditions.push(eq(users.role, 'ADMIN'));
       }
+    }
+
+    // Filter by featured flag
+    if (featured === 'true') {
+      conditions.push(eq(posts.isFeatured, true));
+    } else if (featured === 'false') {
+      conditions.push(eq(posts.isFeatured, false));
     }
 
     // Determine sorting
@@ -152,6 +160,7 @@ async function getAdminKosHandler(request: AuthenticatedRequest) {
         ownerType,
         sortBy,
         showDeleted,
+        featured,
       },
     });
   } catch (error) {

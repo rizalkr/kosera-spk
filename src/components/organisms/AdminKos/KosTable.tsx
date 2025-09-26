@@ -38,6 +38,7 @@ export const KosTable: React.FC<KosTableProps> = ({
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">No.</th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">ID Kos</th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Info Kos</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Featured</th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Aksi</th>
           </tr>
         </thead>
@@ -59,6 +60,13 @@ export const KosTable: React.FC<KosTableProps> = ({
                 <td className="px-6 py-4">
                   <div className="text-sm font-medium text-gray-900">{kos.name}</div>
                   <div className="text-sm text-gray-700">{kos.address}, {kos.city}</div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {kos.isFeatured ? (
+                    <span className="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800">Featured</span>
+                  ) : (
+                    <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700">Normal</span>
+                  )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium flex items-center gap-4">
                   {renderActions(kos)}

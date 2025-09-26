@@ -3,6 +3,7 @@
 import React from 'react';
 import type { AdminKosData } from '@/types';
 import { Button } from '@/components/atoms';
+import { useToggleFeatured } from '@/hooks/admin/kos';
 
 export interface KosTableActionsProps {
   selectedCount: number;
@@ -69,6 +70,7 @@ export interface RowActionButtonsProps {
   isPermanentDeleting: boolean;
   onRestore: (id: number) => void;
   onDelete: (id: number, permanent: boolean) => void;
+  onActionComplete: () => void;
 }
 
 export const RowActionButtons: React.FC<RowActionButtonsProps> = ({
@@ -79,7 +81,10 @@ export const RowActionButtons: React.FC<RowActionButtonsProps> = ({
   isPermanentDeleting,
   onRestore,
   onDelete,
+  onActionComplete,
 }) => {
+  const { toggleFeatured, loading: isTogglingFeatured } = useToggleFeatured();
+
   if (showDeleted) {
     return (
       <div className="flex items-center gap-3">
@@ -101,12 +106,26 @@ export const RowActionButtons: React.FC<RowActionButtonsProps> = ({
     );
   }
   return (
-    <button
-      onClick={() => onDelete(kos.id, false)}
-      disabled={isDeleting}
-      className="text-orange-600 hover:text-orange-900 disabled:opacity-50"
-    >
-      Archive
-    </button>
+    <div className="flex items-center gap-3">
+      <button
+        onClick={async () => {
+          const success = await toggleFeatured(kos.id, !kos.isFeatured);
+          if (success) {
+            onActionComplete();
+          }
+        }}
+        disabled={isTogglingFeatured}
+        className={`${kos.isFeatured ? 'text-yellow-700 hover:text-yellow-900' : 'text-gray-600 hover:text-gray-900'} disabled:opacity-50`}
+      >
+        {kos.isFeatured ? 'Unfeature' : 'Feature'}
+      </button>
+      <button
+        onClick={() => onDelete(kos.id, false)}
+        disabled={isDeleting}
+        className="text-orange-600 hover:text-orange-900 disabled:opacity-50"
+      >
+        Archive
+      </button>
+    </div>
   );
 };

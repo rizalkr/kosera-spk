@@ -18,6 +18,7 @@ export default function AdminKosPage() {
     ownerType: 'all',
     sortBy: 'newest',
     showDeleted: false,
+    featured: 'all',
   });
 
   const { data, pagination, loading, error, refetch } = useAdminKos(filters);

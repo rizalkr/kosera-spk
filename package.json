@@ -48,10 +48,10 @@
     "docker:test:unit": "docker exec -e NODE_ENV=test kosera-app npm run test:unit",
     "docker:test:integration": "docker exec -e NODE_ENV=test -e INTEGRATION_PERSIST=1 kosera-app npm run test:integration",
     "docker:test:integration:persist": "docker exec -e NODE_ENV=test -e INTEGRATION_PERSIST=1 kosera-app npm run test:integration",
-    "docker:test:all": "docker exec kosera-app npm run test:all",
+  "docker:test:all": "docker exec kosera-app npm run test:all",
 
     
-    "docker:dev": "docker compose up --build",
+    "docker:dev": "docker compose up",
     "docker:dev:detach": "docker compose up --build -d",
     "docker:dev:down": "docker compose down",
     "docker:dev:clean": "docker compose down -v --remove-orphans",
