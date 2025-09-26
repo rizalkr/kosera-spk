@@ -1,5 +1,5 @@
 import { useKosPhotos } from '../useApi';
-import { KosPhoto } from '@/types/kos';
+import type { KosPhoto, KosPhotosApiResponse } from '@/types/kos';
 
 /**
  * Custom hook untuk mendapatkan image primary dari kos
@@ -7,8 +7,7 @@ import { KosPhoto } from '@/types/kos';
  */
 export function useKosImage(kosId: number) {
   const { data: photosData, isLoading } = useKosPhotos(kosId);
-  
-  const kosPhotos = photosData?.success ? photosData.data.photos : [];
+  const kosPhotos: KosPhoto[] = (photosData as KosPhotosApiResponse | undefined)?.success ? (photosData as KosPhotosApiResponse).data.photos : [];
   
   // Cari foto primary, jika tidak ada ambil foto pertama
   const primaryPhoto = kosPhotos.find((photo: KosPhoto) => photo.isPrimary);
@@ -29,8 +28,7 @@ export function useKosImage(kosId: number) {
  */
 export function useKosImages(kosId: number) {
   const { data: photosData, isLoading } = useKosPhotos(kosId);
-  
-  const kosPhotos = photosData?.success ? photosData.data.photos : [];
+  const kosPhotos: KosPhoto[] = (photosData as KosPhotosApiResponse | undefined)?.success ? (photosData as KosPhotosApiResponse).data.photos : [];
   
   // Sort photos - primary first, then by creation date
   const sortedPhotos = kosPhotos.length > 0 

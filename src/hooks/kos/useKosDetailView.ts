@@ -3,29 +3,13 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useKosDetails, useTrackView, useAddFavorite, useRemoveFavorite, useFavorites, useKosPhotos } from '@/hooks/useApi';
 import { useAuthGuard } from '@/hooks/auth/useAuthGuard';
 import { useKosImages } from '@/hooks/image/useImageWithFallback';
+import type { KosDetailData } from '@/types';
 
-export interface KosReviewSummary { averageRating?: string; totalReviews?: number; }
-export interface KosOwner { id: number; username: string; name?: string; contact?: string; }
 export interface KosPhoto { url: string; isPrimary: boolean; createdAt: string; }
-export interface KosDetailData {
-  id: number;
-  name: string;
-  address: string;
-  city: string;
-  description: string;
-  facilities?: string | null;
-  price: number;
-  viewCount: number;
-  favoriteCount: number;
-  latitude?: number | null;
-  longitude?: number | null;
-  owner?: KosOwner;
-  reviews?: { data?: Array<{ id: number; rating: number; comment: string; createdAt: string; user: { id: number; name: string; username: string } }>; statistics?: { averageRating: string; totalReviews: number }; pagination?: { hasNext: boolean } };
-}
 
 export interface UseKosDetailViewResult {
   kosId: number;
-  kos: KosDetailData | undefined; // previously any
+  kos: KosDetailData | undefined;
   isLoading: boolean;
   error: unknown;
   isFavorited: boolean;
@@ -78,7 +62,7 @@ export const useKosDetailView = (): UseKosDetailViewResult => {
     : [];
   const { images: displayImages } = useKosImages(sortedPhotos);
 
-  const kos = kosData?.success ? (kosData.data as KosDetailData) : undefined;
+  const kos = kosData?.success ? kosData.data : undefined;
   const isFavorited = useMemo(() => (
     (favoritesData?.success && favoritesData?.data?.favorites?.some((fav: { kos: { id: number } }) => fav.kos.id === kosId)) || false
   ), [favoritesData, kosId]);

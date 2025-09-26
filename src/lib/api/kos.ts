@@ -1,5 +1,5 @@
 import { createAuthHeaders } from './utils';
-import type { ApiResponse, AdminKosData, SearchParams, KosSearchApiResponse, PublicKosData } from '@/types';
+import type { ApiResponse, AdminKosData, SearchParams, KosSearchApiResponse, PublicKosData, KosPhotosApiResponse, KosDetailData } from '@/types';
 import { z } from 'zod';
 import { apiClient } from '@/lib/api/client';
 
@@ -49,8 +49,8 @@ export const kosApi = {
   getNearby: async (lat: number, lng: number, radius = 5): Promise<KosSearchApiResponse> => {
     return apiClient.get(`/api/kos/nearby`, { latitude: lat, longitude: lng, radius });
   },
-  getDetails: async (id: number) => {
-    return apiClient.get(`/api/kos/${id}`);
+  getDetails: async (id: number): Promise<ApiResponse<KosDetailData>> => {
+    return apiClient.get<ApiResponse<KosDetailData>>(`/api/kos/${id}`);
   },
   getMyKos: async (): Promise<ApiResponse<AdminKosData[]>> => {
     return apiClient.get(`/api/kos/my`, undefined, { headers: createAuthHeaders() });
@@ -58,7 +58,7 @@ export const kosApi = {
   trackView: async (id: number) => {
     return apiClient.post(`/api/kos/${id}/view`, undefined, { headers: createAuthHeaders() });
   },
-  getPhotos: async (id: number) => {
-    return apiClient.get(`/api/kos/${id}/photos`);
+  getPhotos: async (id: number): Promise<KosPhotosApiResponse> => {
+    return apiClient.get<KosPhotosApiResponse>(`/api/kos/${id}/photos`);
   },
 };

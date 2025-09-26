@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { kosApi, authApi, favoritesApi, bookingsApi, sellerApi, adminApi } from '../lib/api/';
-import type { SearchParams } from '@/types';
+import type { SearchParams, ApiResponse, KosDetailData, KosPhotosApiResponse } from '@/types';
 import type { GetBookingsParams } from '@/lib/api/bookings';
 
 // Kos hooks
@@ -35,14 +35,14 @@ export const useKosNearby = (lat?: number, lng?: number, radius = 5) => {
 };
 
 export const useKosDetails = (id: number) => {
-  return useQuery({
+  return useQuery<ApiResponse<KosDetailData>>({
     queryKey: ['kos', 'details', id],
     queryFn: () => kosApi.getDetails(id),
   });
 };
 
 export const useKosPhotos = (id: number) => {
-  return useQuery({
+  return useQuery<KosPhotosApiResponse>({
     queryKey: ['kos', 'photos', id],
     queryFn: () => kosApi.getPhotos(id),
     enabled: !!id, // Only run when we have a valid ID

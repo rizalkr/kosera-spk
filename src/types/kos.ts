@@ -79,6 +79,52 @@ export interface AdminKosData extends PublicKosData {
   owner: PublicKosData['owner'] & { role: string }; // Extends the owner type with a role
 }
 
+// Detail page data with reviews and counters
+export interface ReviewUser {
+  id: number;
+  name: string;
+  username: string;
+}
+
+export interface ReviewItem {
+  id: number;
+  rating: number;
+  comment: string;
+  createdAt: string;
+  user: ReviewUser;
+}
+
+export interface ReviewStatistics {
+  averageRating: string | number;
+  totalReviews: number;
+  ratingDistribution?: Record<string, number>;
+}
+
+export interface ReviewPaginationMeta {
+  page: number;
+  limit: number;
+  totalReviews: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+}
+
+export interface KosReviews {
+  data: ReviewItem[];
+  statistics: ReviewStatistics;
+  pagination: ReviewPaginationMeta;
+}
+
+export interface KosDetailData extends PublicKosData {
+  postId: number;
+  isFeatured: boolean;
+  viewCount: number;
+  favoriteCount: number;
+  photoCount: number;
+  reviews: KosReviews;
+  owner: PublicKosData['owner'] & { name?: string };
+}
+
 // =================================================================
 // FORM & API RESPONSE TYPES
 // =================================================================
