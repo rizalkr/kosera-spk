@@ -8,6 +8,19 @@ import ProtectedRoute from '@/components/layouts/ProtectedRoute';
 import { useAuthToken } from '@/hooks/auth/useAuthToken';
 import { showConfirm, showSuccess, showError } from '@/lib/sweetalert';
 
+// API response types for booking detail
+interface BookingDetailResponse {
+  success: true;
+  message: string;
+  data: { booking: BookingDetail };
+}
+interface ErrorResponse {
+  success: false;
+  error: string;
+  message?: string;
+}
+type BookingDetailApiResponse = BookingDetailResponse | ErrorResponse;
+
 type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed';
 
 type BookingDetail = {
@@ -61,24 +74,14 @@ export default function BookingDetailPage() {
         return;
       }
 
-      const response = await fetch(`/api/bookings/${bookingId}`, {
+      const data: BookingDetailApiResponse = await (await import('@/lib/api/client')).apiClient.get(`/api/bookings/${bookingId}`, undefined, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch booking detail');
-      }
-
-      if (data.success) {
-        setBooking(data.data.booking);
-      } else {
-        throw new Error(data.error || 'Failed to load booking');
-      }
+      if (data.success) setBooking(data.data.booking);
+      else throw new Error(data.error || 'Failed to load booking');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error occurred');
     } finally {
@@ -128,19 +131,15 @@ export default function BookingDetailPage() {
       const token = getToken();
       if (!token) return;
 
-      const response = await fetch(`/api/bookings/${bookingId}`, {
-        method: 'PUT',
+      const data: BookingDetailApiResponse = await (await import('@/lib/api/client')).apiClient.put(`/api/bookings/${bookingId}`, {
+        status: 'cancelled',
+        notes: 'Booking dibatalkan oleh pengguna',
+      }, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          status: 'cancelled',
-          notes: 'Booking dibatalkan oleh pengguna'
-        }),
       });
-
-      const data = await response.json();
 
       if (data.success) {
         // Refresh booking data

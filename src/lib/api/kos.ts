@@ -1,4 +1,4 @@
-import { createAuthHeaders, API_BASE_URL } from './utils';
+import { createAuthHeaders } from './utils';
 import type { ApiResponse, AdminKosData, SearchParams, KosSearchApiResponse, PublicKosData } from '@/types';
 import { z } from 'zod';
 import { apiClient } from '@/lib/api/client';
@@ -38,44 +38,27 @@ export const createKos = async (payload: CreateKosRequest): Promise<CreateKosRes
 
 export const kosApi = {
   getFeatured: async (): Promise<ApiResponse<PublicKosData[]>> => {
-    const response = await fetch(`${API_BASE_URL}/api/kos/featured`);
-    return response.json();
+    return apiClient.get('/api/kos/featured');
   },
   getRecommendations: async (params: SearchParams = {}): Promise<KosSearchApiResponse> => {
-    const searchParams = new URLSearchParams(params as Record<string, string>);
-    const response = await fetch(`${API_BASE_URL}/api/kos/recommendations?${searchParams}`);
-    return response.json();
+    return apiClient.get(`/api/kos/recommendations`, params as Record<string, unknown>);
   },
   search: async (params: SearchParams = {}): Promise<KosSearchApiResponse> => {
-    const searchParams = new URLSearchParams(params as Record<string, string>);
-    const response = await fetch(`${API_BASE_URL}/api/kos/search?${searchParams}`);
-    return response.json();
+    return apiClient.get(`/api/kos/search`, params as Record<string, unknown>);
   },
   getNearby: async (lat: number, lng: number, radius = 5): Promise<KosSearchApiResponse> => {
-    const response = await fetch(
-      `${API_BASE_URL}/api/kos/nearby?latitude=${lat}&longitude=${lng}&radius=${radius}`
-    );
-    return response.json();
+    return apiClient.get(`/api/kos/nearby`, { latitude: lat, longitude: lng, radius });
   },
   getDetails: async (id: number) => {
-    const response = await fetch(`${API_BASE_URL}/api/kos/${id}`);
-    return response.json();
+    return apiClient.get(`/api/kos/${id}`);
   },
   getMyKos: async (): Promise<ApiResponse<AdminKosData[]>> => {
-    const response = await fetch(`${API_BASE_URL}/api/kos/my`, {
-      headers: createAuthHeaders(),
-    });
-    return response.json();
+    return apiClient.get(`/api/kos/my`, undefined, { headers: createAuthHeaders() });
   },
   trackView: async (id: number) => {
-    const response = await fetch(`${API_BASE_URL}/api/kos/${id}/view`, {
-      method: 'POST',
-      headers: createAuthHeaders(),
-    });
-    return response.json();
+    return apiClient.post(`/api/kos/${id}/view`, undefined, { headers: createAuthHeaders() });
   },
   getPhotos: async (id: number) => {
-    const response = await fetch(`${API_BASE_URL}/api/kos/${id}/photos`);
-    return response.json();
+    return apiClient.get(`/api/kos/${id}/photos`);
   },
 };

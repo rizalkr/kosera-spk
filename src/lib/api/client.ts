@@ -119,10 +119,18 @@ export class ApiClient {
     const timeoutId = setTimeout(() => controller.abort(), timeout);
 
     try {
+      // Build headers and handle FormData specially
+      const headers = this.createHeaders(options);
+      const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
+      if (isFormData && 'Content-Type' in headers) {
+        // Let the browser set the proper multipart/form-data boundary
+        delete (headers as Record<string, string>)['Content-Type'];
+      }
+
       const response = await fetch(url, {
         method: options.method ?? 'GET',
-        headers: this.createHeaders(options),
-        body: options.body ? JSON.stringify(options.body) : undefined,
+        headers,
+        body: options.body ? (isFormData ? (options.body as BodyInit) : JSON.stringify(options.body)) : undefined,
         signal: controller.signal,
       });
 

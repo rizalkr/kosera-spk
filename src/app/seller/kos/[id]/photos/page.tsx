@@ -9,7 +9,25 @@ import ProtectedRoute from '@/components/layouts/ProtectedRoute';
 import { useAuthToken } from '@/hooks/auth/useAuthToken';
 import { useKosDetails } from '@/hooks/useApi';
 import { showSuccess, showError, showConfirm, showLoading, showToast } from '@/lib/sweetalert';
+import type { ApiResponse, PublicKosData } from '@/types';
 import Swal from 'sweetalert2';
+
+// API response types
+interface PhotosListResponse {
+  success: true;
+  data: { photos: Array<{ id: number; url: string; isPrimary: boolean; caption?: string; createdAt: string }> };
+  message?: string;
+}
+interface GenericOkResponse {
+  success: true;
+  message?: string;
+}
+interface GenericErrorResponse {
+  success: false;
+  error: string;
+  message?: string;
+}
+type PhotosApiResponse = PhotosListResponse | GenericOkResponse | GenericErrorResponse;
 
 export default function SellerKosPhotosPage() {
   const params = useParams();
@@ -18,7 +36,7 @@ export default function SellerKosPhotosPage() {
   const kosId = params.id as string;
   
   const { data: kosResponse, isLoading, error, refetch } = useKosDetails(parseInt(kosId));
-  const kosData = kosResponse?.data;
+  const kosData = (kosResponse as ApiResponse<PublicKosData> | undefined)?.data;
   
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
@@ -38,17 +56,14 @@ export default function SellerKosPhotosPage() {
       const token = getToken();
       if (!token) return;
 
-      const response = await fetch(`/api/kos/${kosId}/photos`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+      const data: PhotosApiResponse = await (await import('@/lib/api/client')).apiClient.get(`/api/kos/${kosId}/photos`, undefined, {
+        headers: { Authorization: `Bearer ${token}` },
       });
-      
-      const data = await response.json();
-      if (data.success) {
+      if (data.success && 'data' in data) {
         setPhotos(data.data.photos || []);
       } else {
-        console.error('Failed to fetch photos:', data.error);
+        const err = !data.success ? data.error : 'Invalid response';
+        console.error('Failed to fetch photos:', err);
       }
     } catch (error) {
       console.error('Error fetching photos:', error);
@@ -155,19 +170,11 @@ export default function SellerKosPhotosPage() {
         formData.append('isPrimary', 'true');
       }
 
-      const response = await fetch(`/api/kos/${kosId}/photos/upload`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-        body: formData,
-      });
-
-      const data = await response.json();
+      const data: PhotosApiResponse = await (await import('@/lib/api/client')).apiClient.request(`/api/kos/${kosId}/photos/upload`, { method: 'POST', body: formData, headers: { Authorization: `Bearer ${token}` } });
       
       if (data.success) {
         Swal.close();
-        showSuccess(data.message || 'Foto berhasil diupload');
+        showSuccess(('message' in data && data.message) ? data.message : 'Foto berhasil diupload');
         setSelectedFiles(null);
         // Reset file input
         const fileInput = document.getElementById('photo-upload') as HTMLInputElement;
@@ -178,7 +185,8 @@ export default function SellerKosPhotosPage() {
         refetch();
       } else {
         Swal.close();
-        showError(data.error || 'Gagal mengupload foto');
+  const err = !data.success ? data.error : 'Gagal mengupload foto';
+  showError(err);
       }
     } catch (error) {
       console.error('Upload error:', error);
@@ -207,16 +215,7 @@ export default function SellerKosPhotosPage() {
           return;
         }
 
-        const response = await fetch(`/api/kos/${kosId}/photos`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ photoId }),
-        });
-
-        const data = await response.json();
+  const data: PhotosApiResponse = await (await import('@/lib/api/client')).apiClient.request(`/api/kos/${kosId}/photos`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: { photoId } });
         
         if (data.success) {
           Swal.close();
@@ -227,7 +226,8 @@ export default function SellerKosPhotosPage() {
           refetch();
         } else {
           Swal.close();
-          showError(data.error || 'Gagal menghapus foto');
+          const err = !data.success ? data.error : 'Gagal menghapus foto';
+          showError(err);
         }
       } catch (error) {
         console.error('Delete error:', error);
@@ -255,15 +255,7 @@ export default function SellerKosPhotosPage() {
           return;
         }
         
-        const response = await fetch(`/api/kos/${kosId}/photos/${photoId}/primary`, {
-          method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        const data = await response.json();
+        const data: PhotosApiResponse = await (await import('@/lib/api/client')).apiClient.put(`/api/kos/${kosId}/photos/${photoId}/primary`, undefined, { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } });
         
         if (data.success) {
           Swal.close();
@@ -272,7 +264,8 @@ export default function SellerKosPhotosPage() {
           await fetchPhotos();
         } else {
           Swal.close();
-          showError(data.error || 'Gagal mengatur foto utama');
+          const err = !data.success ? data.error : 'Gagal mengatur foto utama';
+          showError(err);
         }
       } catch (error) {
         console.error('Set primary error:', error);
