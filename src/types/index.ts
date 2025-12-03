@@ -6,3 +6,4 @@ export * from './booking';
 export * from './favorites';
 export * from './dashboard';
 export * from './seller-kos';
+export * from './profile-matching';
