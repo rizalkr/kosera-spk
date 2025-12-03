@@ -40,15 +40,15 @@
 
     
     "docker:test:setup": "docker compose up -d db_test && sleep 2",
-    "docker:db:migrate": "docker exec kosera-app npm run db:migrate",
-    "docker:db:push": "docker exec kosera-app npm run db:push",
-    "docker:db:push:test": "docker exec kosera-app npm run db:push:test",
-    "docker:db:seed": "docker exec kosera-app npm run db:seed",
-    "docker:db:migrate:test": "docker exec kosera-app npx dotenv -e .env.test -- drizzle-kit migrate",
-    "docker:test:unit": "docker exec -e NODE_ENV=test kosera-app npm run test:unit",
-    "docker:test:integration": "docker exec -e NODE_ENV=test -e INTEGRATION_PERSIST=1 kosera-app npm run test:integration",
-    "docker:test:integration:persist": "docker exec -e NODE_ENV=test -e INTEGRATION_PERSIST=1 kosera-app npm run test:integration",
-  "docker:test:all": "docker exec kosera-app npm run test:all",
+    "docker:db:migrate": "docker exec -it kosera-app npm run db:migrate",
+    "docker:db:push": "docker exec -it kosera-app npm run db:push",
+    "docker:db:push:test": "docker exec -it kosera-app npm run db:push:test",
+    "docker:db:seed": "docker exec -it kosera-app npm run db:seed",
+    "docker:db:migrate:test": "docker exec -it kosera-app npx dotenv -e .env.test -- drizzle-kit migrate",
+    "docker:test:unit": "docker exec -it -e NODE_ENV=test kosera-app npm run test:unit",
+    "docker:test:integration": "docker exec -it -e NODE_ENV=test -e INTEGRATION_PERSIST=1 kosera-app npm run test:integration",
+    "docker:test:integration:persist": "docker exec -it -e NODE_ENV=test -e INTEGRATION_PERSIST=1 kosera-app npm run test:integration",
+  "docker:test:all": "docker exec -it kosera-app npm run test:all",
 
     
     "docker:dev": "docker compose up",
@@ -60,7 +60,7 @@
     "docker:prod:down": "docker compose -f docker compose.prod.yml down",
     "docker:logs": "docker logs kosera-app",
     "docker:logs:follow": "docker logs -f kosera-app",
-    "docker:shell": "docker exec -it kosera-app /bin/sh",
+    "docker:shell": "docker exec -it -it kosera-app /bin/sh",
     "docker:restart": "docker restart kosera-app",
     "docker:status": "docker ps --filter name=kosera"
   },
