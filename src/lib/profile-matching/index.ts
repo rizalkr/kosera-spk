@@ -10,7 +10,6 @@ export {
   calculateLocationScore,
   calculateFacilitiesScore,
   calculateRatingScore,
-  calculateAvailabilityScore,
   calculateMatchingScore,
   calculateDistance,
   parseFacilities,
