@@ -1,82 +1,226 @@
 /**
  * Profile Matching Scoring Functions
  * 
- * Core scoring algorithms for the Profile Matching SPK system.
- * Each function calculates a score (1.0 - 5.0) for a specific criteria.
+ * Implementasi algoritma Profile Matching untuk Sistem Pendukung Keputusan (SPK)
+ * pemilihan kos berdasarkan metodologi Kusrini (2007).
+ * 
+ * Tahapan Profile Matching:
+ * 1. Pemetaan GAP: Selisih antara profil kos dengan profil ideal user
+ * 2. Konversi GAP ke Bobot: Menggunakan tabel standar Kusrini
+ * 3. Perhitungan Core Factor (NCF): Rata-rata faktor utama
+ * 4. Perhitungan Secondary Factor (NSF): Rata-rata faktor pendukung
+ * 5. Perhitungan Nilai Total: (x% * NCF) + (y% * NSF)
+ * 
+ * Referensi:
+ * - Kusrini. (2007). Konsep dan Aplikasi Sistem Pendukung Keputusan. Andi Offset.
  */
 
 import type { UserPreferencesData, MatchingScoreDetails } from '@/types/profile-matching';
 
 // ============================================================
-// PRICE SCORING
+// KONSTANTA PROFILE MATCHING
 // ============================================================
 
 /**
- * Calculate price matching score based on budget range.
+ * Persentase bobot Core Factor dan Secondary Factor
+ * Berdasarkan standar umum metodologi Profile Matching (Kusrini, 2007)
  * 
- * Scoring:
- * - In range: 5.0
- * - Below min (cheaper): 4.5
- * - Above max by <10%: 4.0
- * - Above max by 10-20%: 3.0
- * - Above max by 20-30%: 2.0
- * - Above max by >30%: 1.0
+ * Core Factor: Kriteria utama yang HARUS dipenuhi
+ * Secondary Factor: Kriteria pendukung yang DIHARAPKAN terpenuhi
+ */
+export const CORE_FACTOR_PERCENTAGE = 0.6; // 60%
+export const SECONDARY_FACTOR_PERCENTAGE = 0.4; // 40%
+
+/**
+ * Bobot default kriteria berdasarkan perhitungan ROC (Rank Order Centroid)
  * 
- * @param price - Actual kos price
- * @param budgetMin - User's minimum budget (nullable)
- * @param budgetMax - User's maximum budget (nullable)
- * @returns Score between 1.0 and 5.0
+ * Asumsi urutan prioritas berdasarkan survei umum pencari kos:
+ * 1. Harga (Rank 1) - Paling penting karena keterbatasan budget
+ * 2. Lokasi (Rank 2) - Kedekatan dengan kampus/kantor
+ * 3. Fasilitas (Rank 3) - Kenyamanan tinggal
+ * 4. Rating (Rank 4) - Reputasi kos
+ * 
+ * Rumus ROC untuk n=4 kriteria:
+ * w1 = (1/4) * (1/1 + 1/2 + 1/3 + 1/4) = 0.521
+ * w2 = (1/4) * (1/2 + 1/3 + 1/4) = 0.271
+ * w3 = (1/4) * (1/3 + 1/4) = 0.146
+ * w4 = (1/4) * (1/4) = 0.063
+ * 
+ * Dinormalisasi ke persentase (total 100):
+ */
+export const DEFAULT_WEIGHT_PRICE = 52; // 52.1% -> 52
+export const DEFAULT_WEIGHT_LOCATION = 27; // 27.1% -> 27
+export const DEFAULT_WEIGHT_FACILITIES = 15; // 14.6% -> 15
+export const DEFAULT_WEIGHT_RATING = 6; // 6.3% -> 6
+
+// ============================================================
+// GAP MAPPING (INTI METODE PROFILE MATCHING)
+// ============================================================
+
+/**
+ * Tabel konversi GAP ke Bobot berdasarkan Kusrini (2007)
+ * 
+ * GAP = Profil Kos - Profil Ideal User
+ * 
+ * | GAP | Bobot | Keterangan |
+ * |-----|-------|------------|
+ * | 0   | 5.0   | Tidak ada selisih (ideal) |
+ * | 1   | 4.5   | Kelebihan 1 tingkat |
+ * | -1  | 4.0   | Kekurangan 1 tingkat |
+ * | 2   | 3.5   | Kelebihan 2 tingkat |
+ * | -2  | 3.0   | Kekurangan 2 tingkat |
+ * | 3   | 2.5   | Kelebihan 3 tingkat |
+ * | -3  | 2.0   | Kekurangan 3 tingkat |
+ * | 4   | 1.5   | Kelebihan 4 tingkat |
+ * | -4  | 1.0   | Kekurangan 4 tingkat |
+ * 
+ * @param gap - Selisih profil (Profil Kos - Profil User)
+ * @returns Bobot nilai 1.0 - 5.0
+ */
+export const convertGapToWeight = (gap: number): number => {
+  // Batasi gap ke range -4 sampai 4
+  const clampedGap = Math.max(-4, Math.min(4, gap));
+  
+  switch (clampedGap) {
+    case 0: return 5.0;  // Ideal match
+    case 1: return 4.5;  // Sedikit lebih tinggi (untuk cost: lebih mahal sedikit)
+    case -1: return 4.0; // Sedikit lebih rendah (untuk cost: lebih murah sedikit)
+    case 2: return 3.5;
+    case -2: return 3.0;
+    case 3: return 2.5;
+    case -3: return 2.0;
+    case 4: return 1.5;
+    case -4: return 1.0;
+    default: return 1.0;
+  }
+};
+
+// ============================================================
+// LEVEL MAPPING FUNCTIONS
+// ============================================================
+
+/**
+ * Konversi harga ke level 1-5
+ * 
+ * Level berdasarkan range harga kos di Indonesia:
+ * - Level 1: <= Rp 500.000 (Sangat Murah)
+ * - Level 2: Rp 500.001 - Rp 1.000.000 (Murah)
+ * - Level 3: Rp 1.000.001 - Rp 1.500.000 (Sedang)
+ * - Level 4: Rp 1.500.001 - Rp 2.500.000 (Mahal)
+ * - Level 5: > Rp 2.500.000 (Sangat Mahal)
+ * 
+ * @param price - Harga kos per bulan
+ * @returns Level 1-5
+ */
+export const getPriceLevel = (price: number): number => {
+  if (price <= 500000) return 1;
+  if (price <= 1000000) return 2;
+  if (price <= 1500000) return 3;
+  if (price <= 2500000) return 4;
+  return 5;
+};
+
+/**
+ * Konversi jarak ke level 1-5
+ * 
+ * Level berdasarkan jarak ke lokasi preferensi:
+ * - Level 1: > 15 km (Sangat Jauh)
+ * - Level 2: 10-15 km (Jauh)
+ * - Level 3: 5-10 km (Sedang)
+ * - Level 4: 1-5 km (Dekat)
+ * - Level 5: <= 1 km (Sangat Dekat)
+ * 
+ * @param distanceKm - Jarak dalam kilometer
+ * @returns Level 1-5 (5 = terdekat/terbaik)
+ */
+export const getDistanceLevel = (distanceKm: number): number => {
+  if (distanceKm <= 1) return 5;
+  if (distanceKm <= 5) return 4;
+  if (distanceKm <= 10) return 3;
+  if (distanceKm <= 15) return 2;
+  return 1;
+};
+
+/**
+ * Konversi rating ke level 1-5
+ * 
+ * Rating sudah dalam skala 1-5, dibulatkan ke integer terdekat
+ * 
+ * @param rating - Rating kos (1.0 - 5.0)
+ * @returns Level 1-5
+ */
+export const getRatingLevel = (rating: number): number => {
+  if (rating <= 0 || isNaN(rating)) return 1; // Belum ada rating
+  return Math.max(1, Math.min(5, Math.round(rating)));
+};
+
+/**
+ * Konversi persentase fasilitas terpenuhi ke level 1-5
+ * 
+ * - Level 1: 0-20% fasilitas terpenuhi
+ * - Level 2: 21-40% fasilitas terpenuhi
+ * - Level 3: 41-60% fasilitas terpenuhi
+ * - Level 4: 61-80% fasilitas terpenuhi
+ * - Level 5: 81-100% fasilitas terpenuhi
+ * 
+ * @param fulfillmentPercentage - Persentase fasilitas yang terpenuhi (0-100)
+ * @returns Level 1-5
+ */
+export const getFacilitiesLevel = (fulfillmentPercentage: number): number => {
+  if (fulfillmentPercentage <= 20) return 1;
+  if (fulfillmentPercentage <= 40) return 2;
+  if (fulfillmentPercentage <= 60) return 3;
+  if (fulfillmentPercentage <= 80) return 4;
+  return 5;
+};
+
+// ============================================================
+// PRICE SCORING (GAP-BASED)
+// ============================================================
+
+/**
+ * Hitung skor harga menggunakan metode Profile Matching (GAP)
+ * 
+ * Untuk kriteria COST (harga), semakin rendah semakin baik.
+ * GAP = Level Budget User - Level Harga Kos
+ * 
+ * Contoh:
+ * - Budget user Rp 1.500.000 (Level 3), Harga kos Rp 1.200.000 (Level 3)
+ *   GAP = 3 - 3 = 0 -> Bobot 5.0 (Ideal)
+ * - Budget user Rp 1.500.000 (Level 3), Harga kos Rp 2.000.000 (Level 4)
+ *   GAP = 3 - 4 = -1 -> Bobot 4.0 (Sedikit melebihi budget)
+ * 
+ * @param price - Harga kos per bulan
+ * @param budgetMin - Budget minimum user (nullable)
+ * @param budgetMax - Budget maksimum user (nullable)
+ * @returns Object dengan skor dan detail GAP
  */
 export const calculatePriceScore = (
   price: number,
   budgetMin: number | null,
   budgetMax: number | null
-): number => {
-  // If no budget constraints, give neutral score
+): { score: number; gap: number; kosLevel: number; userLevel: number } => {
+  // Jika tidak ada constraint budget, anggap ideal
   if (budgetMin === null && budgetMax === null) {
-    return 4.0;
+    return { score: 5.0, gap: 0, kosLevel: getPriceLevel(price), userLevel: getPriceLevel(price) };
   }
 
-  // Only minimum budget set
-  if (budgetMax === null) {
-    if (price >= budgetMin!) {
-      return 5.0; // Within acceptable range
-    }
-    return 4.5; // Below minimum (cheaper than expected)
-  }
-
-  // Only maximum budget set
-  if (budgetMin === null) {
-    if (price <= budgetMax) {
-      return 5.0; // Within budget
-    }
-    // Calculate how much over budget
-    const overagePercent = ((price - budgetMax) / budgetMax) * 100;
-    if (overagePercent <= 10) return 4.0;
-    if (overagePercent <= 20) return 3.0;
-    if (overagePercent <= 30) return 2.0;
-    return 1.0;
-  }
-
-  // Both min and max set
-  if (price >= budgetMin && price <= budgetMax) {
-    return 5.0; // Perfect match - within range
-  }
-
-  if (price < budgetMin) {
-    return 4.5; // Below minimum (cheaper)
-  }
-
-  // Price is above maximum
-  const overagePercent = ((price - budgetMax) / budgetMax) * 100;
-  if (overagePercent <= 10) return 4.0;
-  if (overagePercent <= 20) return 3.0;
-  if (overagePercent <= 30) return 2.0;
-  return 1.0;
+  // Gunakan budget max sebagai target, atau budget min jika max tidak ada
+  const targetBudget = budgetMax ?? budgetMin!;
+  
+  const kosLevel = getPriceLevel(price);
+  const userLevel = getPriceLevel(targetBudget);
+  
+  // GAP = Level User - Level Kos (untuk cost, user ingin kos <= budget)
+  const gap = userLevel - kosLevel;
+  
+  const score = convertGapToWeight(gap);
+  
+  return { score, gap, kosLevel, userLevel };
 };
 
 // ============================================================
-// LOCATION SCORING
+// LOCATION SCORING (GAP-BASED)
 // ============================================================
 
 /**
@@ -107,28 +251,19 @@ export const calculateDistance = (
 const toRad = (deg: number): number => deg * (Math.PI / 180);
 
 /**
- * Calculate location matching score based on city preference or distance.
+ * Hitung skor lokasi menggunakan metode Profile Matching (GAP)
  * 
- * City-based scoring:
- * - City matches preference: 5.0
- * - City doesn't match: 1.0
+ * Untuk kriteria BENEFIT (lokasi), semakin dekat semakin baik.
+ * GAP = Level Jarak Kos - Level Ideal User (Level 5 = terdekat)
  * 
- * Distance-based scoring (if coordinates available):
- * - 0-1 km: 5.0
- * - 1-3 km: 4.5
- * - 3-5 km: 4.0
- * - 5-10 km: 3.0
- * - 10-15 km: 2.0
- * - >15 km: 1.0
+ * Jika user set preferensi koordinat:
+ * - Hitung jarak aktual, konversi ke level
+ * - GAP = Level Kos - 5 (user ingin level 5 = terdekat)
  * 
- * @param kosCity - Kos city
- * @param kosLat - Kos latitude (optional)
- * @param kosLng - Kos longitude (optional)
- * @param preferredCities - User's preferred cities
- * @param prefLat - User's preferred latitude (optional)
- * @param prefLng - User's preferred longitude (optional)
- * @param maxDistanceKm - User's maximum distance preference (optional)
- * @returns Object with score and optional distance
+ * Jika user set preferensi kota:
+ * - Kota match = Level 5, tidak match = Level 1
+ * 
+ * @returns Object dengan skor, GAP, dan jarak (jika ada)
  */
 export const calculateLocationScore = (
   kosCity: string,
@@ -138,26 +273,25 @@ export const calculateLocationScore = (
   prefLat: number | null,
   prefLng: number | null,
   maxDistanceKm: number | null
-): { score: number; distance?: number } => {
-  // If user has coordinate preference and kos has coordinates
+): { score: number; gap: number; kosLevel: number; userLevel: number; distance?: number } => {
+  // User level ideal = 5 (terdekat)
+  const userLevel = 5;
+  
+  // Jika ada koordinat preferensi dan kos punya koordinat
   if (prefLat !== null && prefLng !== null && kosLat !== null && kosLng !== null) {
     const distance = calculateDistance(prefLat, prefLng, kosLat, kosLng);
+    const kosLevel = getDistanceLevel(distance);
     
-    // If max distance set and exceeded, low score
+    // Jika melebihi jarak maksimum yang diset user, beri penalty
     if (maxDistanceKm !== null && distance > maxDistanceKm) {
-      return { score: 1.0, distance };
+      return { score: 1.0, gap: -4, kosLevel: 1, userLevel, distance };
     }
     
-    // Score based on distance
-    let score: number;
-    if (distance <= 1) score = 5.0;
-    else if (distance <= 3) score = 4.5;
-    else if (distance <= 5) score = 4.0;
-    else if (distance <= 10) score = 3.0;
-    else if (distance <= 15) score = 2.0;
-    else score = 1.0;
+    // GAP = Level Kos - Level User (untuk benefit, kos harus >= ideal)
+    const gap = kosLevel - userLevel;
+    const score = convertGapToWeight(gap);
     
-    return { score, distance };
+    return { score, gap, kosLevel, userLevel, distance };
   }
   
   // City-based scoring
@@ -165,23 +299,22 @@ export const calculateLocationScore = (
     const cityMatches = preferredCities.some(
       (city) => city.toLowerCase() === kosCity.toLowerCase()
     );
-    return { score: cityMatches ? 5.0 : 1.0 };
+    const kosLevel = cityMatches ? 5 : 1;
+    const gap = kosLevel - userLevel;
+    
+    return { score: convertGapToWeight(gap), gap, kosLevel, userLevel };
   }
   
-  // No location preference - neutral score
-  return { score: 4.0 };
+  // Tidak ada preferensi lokasi = ideal match
+  return { score: 5.0, gap: 0, kosLevel: 5, userLevel: 5 };
 };
 
 // ============================================================
-// FACILITIES SCORING
+// FACILITIES SCORING (GAP-BASED)
 // ============================================================
 
 /**
  * Parse facilities string into array.
- * Handles comma-separated facilities string.
- * 
- * @param facilities - Facilities string (comma-separated)
- * @returns Array of facility names
  */
 export const parseFacilities = (facilities: string | null): string[] => {
   if (!facilities) return [];
@@ -192,52 +325,42 @@ export const parseFacilities = (facilities: string | null): string[] => {
 };
 
 /**
- * Calculate facilities matching score.
+ * Hitung skor fasilitas menggunakan metode Profile Matching (GAP)
  * 
- * Base score from required facilities fulfillment:
- * Score = (Matched Required / Total Required) * 4 + 1
+ * Untuk kriteria BENEFIT (fasilitas), semakin banyak semakin baik.
+ * Hitung persentase fasilitas required yang terpenuhi.
  * 
- * Bonus for optional facilities:
- * +0.25 per optional facility matched (max +1.0)
- * 
- * @param kosFacilities - Kos facilities string
- * @param requiredFacilities - User's required facilities
- * @param optionalFacilities - User's optional facilities
- * @returns Score between 1.0 and 5.0
+ * @returns Object dengan skor, GAP, dan detail
  */
 export const calculateFacilitiesScore = (
   kosFacilities: string | null,
   requiredFacilities: string[],
   optionalFacilities: string[]
-): number => {
-  // If user has no facility preferences, give neutral score
+): { score: number; gap: number; kosLevel: number; userLevel: number; matchedCount: number; totalRequired: number } => {
+  // User level ideal = 5 (semua fasilitas terpenuhi)
+  const userLevel = 5;
+  
+  // Jika tidak ada preferensi fasilitas = ideal match
   if (requiredFacilities.length === 0 && optionalFacilities.length === 0) {
-    return 4.0;
+    return { score: 5.0, gap: 0, kosLevel: 5, userLevel: 5, matchedCount: 0, totalRequired: 0 };
   }
 
   const kosFacilitiesList = parseFacilities(kosFacilities);
   
-  // Calculate required facilities match
+  // Hitung fasilitas required yang terpenuhi
   let requiredMatched = 0;
-  if (requiredFacilities.length > 0) {
-    for (const required of requiredFacilities) {
-      const normalizedRequired = required.toLowerCase();
-      if (kosFacilitiesList.some((f) => f.includes(normalizedRequired) || normalizedRequired.includes(f))) {
-        requiredMatched++;
-      }
+  for (const required of requiredFacilities) {
+    const normalizedRequired = required.toLowerCase();
+    if (kosFacilitiesList.some((f) => f.includes(normalizedRequired) || normalizedRequired.includes(f))) {
+      requiredMatched++;
     }
   }
   
-  // Base score from required facilities
-  let baseScore: number;
-  if (requiredFacilities.length === 0) {
-    baseScore = 4.0; // No required facilities
-  } else {
-    const fulfillmentRatio = requiredMatched / requiredFacilities.length;
-    baseScore = fulfillmentRatio * 4 + 1; // Range 1.0 - 5.0
-  }
+  // Hitung persentase (berdasarkan required saja karena itu yang HARUS)
+  const totalRequired = requiredFacilities.length || 1;
+  const fulfillmentPercentage = (requiredMatched / totalRequired) * 100;
   
-  // Bonus from optional facilities (max +1.0)
+  // Bonus dari optional (tambahan 20% jika semua optional terpenuhi)
   let optionalBonus = 0;
   if (optionalFacilities.length > 0) {
     let optionalMatched = 0;
@@ -247,105 +370,50 @@ export const calculateFacilitiesScore = (
         optionalMatched++;
       }
     }
-    optionalBonus = Math.min((optionalMatched / optionalFacilities.length), 1.0);
+    optionalBonus = (optionalMatched / optionalFacilities.length) * 20;
   }
   
-  // Final score (capped at 5.0)
-  return Math.min(baseScore + optionalBonus * 0.5, 5.0);
+  const adjustedPercentage = Math.min(100, fulfillmentPercentage + optionalBonus);
+  const kosLevel = getFacilitiesLevel(adjustedPercentage);
+  
+  // GAP = Level Kos - Level User (untuk benefit)
+  const gap = kosLevel - userLevel;
+  const score = convertGapToWeight(gap);
+  
+  return { score, gap, kosLevel, userLevel, matchedCount: requiredMatched, totalRequired };
 };
 
 // ============================================================
-// RATING SCORING
+// RATING SCORING (GAP-BASED)
 // ============================================================
 
 /**
- * Calculate rating matching score.
+ * Hitung skor rating menggunakan metode Profile Matching (GAP)
  * 
- * Scoring based on how kos rating compares to minimum preference:
- * - Rating >= minRating + 0.5: 5.0
- * - Rating >= minRating: 4.5
- * - Rating >= minRating - 0.5: 3.5
- * - Rating >= minRating - 1.0: 2.5
- * - Rating < minRating - 1.0: 1.0
+ * Untuk kriteria BENEFIT (rating), semakin tinggi semakin baik.
  * 
- * @param kosRating - Kos average rating
- * @param minRating - User's minimum rating preference
- * @returns Score between 1.0 and 5.0
+ * @returns Object dengan skor dan detail GAP
  */
 export const calculateRatingScore = (
   kosRating: number | string,
   minRating: number
-): number => {
+): { score: number; gap: number; kosLevel: number; userLevel: number } => {
   const rating = typeof kosRating === 'string' ? parseFloat(kosRating) : kosRating;
   
-  // If kos has no rating (0), give lower score
-  if (rating === 0 || isNaN(rating)) {
-    return 2.0;
-  }
+  const kosLevel = getRatingLevel(rating);
+  const userLevel = getRatingLevel(minRating);
   
-  const difference = rating - minRating;
+  // GAP = Level Kos - Level User (untuk benefit, kos harus >= ideal)
+  const gap = kosLevel - userLevel;
+  const score = convertGapToWeight(gap);
   
-  if (difference >= 0.5) return 5.0;
-  if (difference >= 0) return 4.5;
-  if (difference >= -0.5) return 3.5;
-  if (difference >= -1.0) return 2.5;
-  return 1.0;
+  return { score, gap, kosLevel, userLevel };
 };
 
 // ============================================================
-// AVAILABILITY SCORING
+// COMPOSITE SCORING (PROFILE MATCHING)
 // ============================================================
 
-/**
- * Calculate availability score.
- * 
- * @param totalRooms - Total rooms in kos
- * @param occupiedRooms - Number of occupied rooms
- * @param needsAvailable - User needs available room
- * @returns Score between 1.0 and 5.0
- */
-export const calculateAvailabilityScore = (
-  totalRooms: number,
-  occupiedRooms: number | null,
-  needsAvailable: boolean
-): number => {
-  const occupied = occupiedRooms ?? 0;
-  const availableRooms = totalRooms - occupied;
-  
-  if (!needsAvailable) {
-    return 4.0; // User doesn't care about availability
-  }
-  
-  if (availableRooms <= 0) {
-    return 1.0; // No available rooms
-  }
-  
-  // More available rooms = higher score
-  const availabilityRatio = availableRooms / totalRooms;
-  if (availabilityRatio >= 0.5) return 5.0;
-  if (availabilityRatio >= 0.3) return 4.5;
-  if (availabilityRatio >= 0.1) return 4.0;
-  return 3.5;
-};
-
-// ============================================================
-// COMPOSITE SCORING
-// ============================================================
-
-/**
- * Calculate complete matching score for a kos.
- * 
- * Uses weighted scoring based on user preferences.
- * Also calculates core factor and secondary factor averages
- * for traditional profile matching methodology.
- * 
- * Core Factors: Price, Location, Rating
- * Secondary Factors: Facilities
- * 
- * @param kos - Kos data
- * @param preferences - User preferences
- * @returns Matching result with final score and details
- */
 export interface KosDataForScoring {
   price: number;
   city: string;
@@ -357,12 +425,34 @@ export interface KosDataForScoring {
   occupiedRooms: number | null;
 }
 
+/**
+ * Hitung skor total menggunakan metode Profile Matching
+ * 
+ * Tahapan:
+ * 1. Hitung GAP untuk setiap kriteria
+ * 2. Konversi GAP ke bobot (1.0 - 5.0)
+ * 3. Kelompokkan ke Core Factor dan Secondary Factor
+ * 4. Hitung NCF (Nilai Rata-rata Core Factor)
+ * 5. Hitung NSF (Nilai Rata-rata Secondary Factor)
+ * 6. Hitung Nilai Total = (60% * NCF) + (40% * NSF)
+ * 
+ * Pengelompokan Kriteria:
+ * - Core Factor: Harga, Lokasi, Rating (kriteria utama)
+ * - Secondary Factor: Fasilitas (kriteria pendukung)
+ * 
+ * @param kos - Data kos
+ * @param preferences - Preferensi user
+ * @returns Hasil matching dengan skor dan detail
+ */
 export const calculateMatchingScore = (
   kos: KosDataForScoring,
   preferences: UserPreferencesData
 ): { score: number; details: MatchingScoreDetails; distance?: number } => {
-  // Calculate individual scores
-  const priceScore = calculatePriceScore(
+  // ============================================================
+  // TAHAP 1 & 2: Hitung GAP dan Konversi ke Bobot
+  // ============================================================
+  
+  const priceResult = calculatePriceScore(
     kos.price,
     preferences.budgetMin,
     preferences.budgetMax
@@ -378,46 +468,69 @@ export const calculateMatchingScore = (
     preferences.maxDistanceKm
   );
   
-  const facilitiesScore = calculateFacilitiesScore(
+  const facilitiesResult = calculateFacilitiesScore(
     kos.facilities,
     preferences.requiredFacilities,
     preferences.optionalFacilities
   );
   
-  const ratingScore = calculateRatingScore(
+  const ratingResult = calculateRatingScore(
     kos.averageRating,
     preferences.minRating
   );
   
-  // Core Factor Average (Price, Location, Rating)
-  const coreFactorAvg = (priceScore + locationResult.score + ratingScore) / 3;
+  // ============================================================
+  // TAHAP 3: Kelompokkan ke Core Factor dan Secondary Factor
+  // ============================================================
   
-  // Secondary Factor Average (Facilities)
-  const secondaryFactorAvg = facilitiesScore;
+  /**
+   * Core Factor: Kriteria yang HARUS dipenuhi
+   * - Harga: User punya budget terbatas
+   * - Lokasi: Kedekatan dengan kampus/kantor penting
+   * - Rating: Reputasi kos sebagai jaminan kualitas
+   */
+  const coreFactorScores = [
+    priceResult.score,
+    locationResult.score,
+    ratingResult.score,
+  ];
   
-  // Calculate weighted score using user's custom weights
-  const totalWeight = 
-    preferences.weightPrice + 
-    preferences.weightLocation + 
-    preferences.weightFacilities + 
-    preferences.weightRating;
+  /**
+   * Secondary Factor: Kriteria PENDUKUNG
+   * - Fasilitas: Nice to have, bukan keharusan
+   */
+  const secondaryFactorScores = [
+    facilitiesResult.score,
+  ];
   
-  const weightedScore = (
-    (preferences.weightPrice / totalWeight) * priceScore +
-    (preferences.weightLocation / totalWeight) * locationResult.score +
-    (preferences.weightFacilities / totalWeight) * facilitiesScore +
-    (preferences.weightRating / totalWeight) * ratingScore
-  );
+  // ============================================================
+  // TAHAP 4: Hitung NCF (Nilai Rata-rata Core Factor)
+  // ============================================================
+  
+  const NCF = coreFactorScores.reduce((sum, score) => sum + score, 0) / coreFactorScores.length;
+  
+  // ============================================================
+  // TAHAP 5: Hitung NSF (Nilai Rata-rata Secondary Factor)
+  // ============================================================
+  
+  const NSF = secondaryFactorScores.reduce((sum, score) => sum + score, 0) / secondaryFactorScores.length;
+  
+  // ============================================================
+  // TAHAP 6: Hitung Nilai Total (Ranking)
+  // Rumus: (x% * NCF) + (y% * NSF)
+  // ============================================================
+  
+  const finalScore = (CORE_FACTOR_PERCENTAGE * NCF) + (SECONDARY_FACTOR_PERCENTAGE * NSF);
   
   return {
-    score: Math.round(weightedScore * 100) / 100, // Round to 2 decimal places
+    score: Math.round(finalScore * 100) / 100,
     details: {
-      priceScore: Math.round(priceScore * 100) / 100,
+      priceScore: Math.round(priceResult.score * 100) / 100,
       locationScore: Math.round(locationResult.score * 100) / 100,
-      facilitiesScore: Math.round(facilitiesScore * 100) / 100,
-      ratingScore: Math.round(ratingScore * 100) / 100,
-      coreFactorAvg: Math.round(coreFactorAvg * 100) / 100,
-      secondaryFactorAvg: Math.round(secondaryFactorAvg * 100) / 100,
+      facilitiesScore: Math.round(facilitiesResult.score * 100) / 100,
+      ratingScore: Math.round(ratingResult.score * 100) / 100,
+      coreFactorAvg: Math.round(NCF * 100) / 100,
+      secondaryFactorAvg: Math.round(NSF * 100) / 100,
     },
     distance: locationResult.distance,
   };

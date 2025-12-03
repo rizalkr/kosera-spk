@@ -1,15 +1,30 @@
 /**
  * Profile Matching Algorithm
  * 
- * Main algorithm for calculating profile matching recommendations.
- * Combines all scoring functions to produce ranked kos recommendations.
+ * Implementasi algoritma Profile Matching untuk Sistem Pendukung Keputusan (SPK)
+ * pemilihan kos berdasarkan metodologi Kusrini (2007).
+ * 
+ * Tahapan:
+ * 1. Ambil preferensi user dari database
+ * 2. Ambil data kos yang memenuhi kriteria dasar
+ * 3. Hitung skor Profile Matching untuk setiap kos
+ * 4. Urutkan berdasarkan skor tertinggi
+ * 
+ * Referensi:
+ * - Kusrini. (2007). Konsep dan Aplikasi Sistem Pendukung Keputusan. Andi Offset.
  */
 
 import { db } from '@/db';
 import { kos, posts, users, kosPhotos, userPreferences } from '@/db/schema';
 import { eq, and, isNull, sql, gte, lte, inArray } from 'drizzle-orm';
 import type { UserPreferencesData, KosMatchingResult, ProfileMatchingResponse } from '@/types/profile-matching';
-import { calculateMatchingScore } from './scoring';
+import { 
+  calculateMatchingScore, 
+  DEFAULT_WEIGHT_PRICE,
+  DEFAULT_WEIGHT_LOCATION,
+  DEFAULT_WEIGHT_FACILITIES,
+  DEFAULT_WEIGHT_RATING,
+} from './scoring';
 
 // ============================================================
 // HELPER FUNCTIONS
@@ -30,6 +45,9 @@ const parseJsonArray = (jsonString: string | null): string[] => {
 
 /**
  * Convert database preference row to UserPreferencesData
+ * 
+ * Menggunakan bobot default berdasarkan perhitungan ROC (Rank Order Centroid)
+ * jika user belum mengatur bobot custom.
  */
 export const mapDbPreferenceToData = (row: typeof userPreferences.$inferSelect): UserPreferencesData => {
   return {
@@ -46,10 +64,11 @@ export const mapDbPreferenceToData = (row: typeof userPreferences.$inferSelect):
     roomType: (row.roomType as 'single' | 'shared' | 'any') || 'any',
     minRating: row.minRating ? parseFloat(String(row.minRating)) : 3.0,
     needsAvailableRoom: row.needsAvailableRoom ?? true,
-    weightPrice: row.weightPrice ?? 30,
-    weightLocation: row.weightLocation ?? 25,
-    weightFacilities: row.weightFacilities ?? 25,
-    weightRating: row.weightRating ?? 20,
+    // Bobot default berdasarkan ROC (lihat scoring.ts untuk perhitungan)
+    weightPrice: row.weightPrice ?? DEFAULT_WEIGHT_PRICE,
+    weightLocation: row.weightLocation ?? DEFAULT_WEIGHT_LOCATION,
+    weightFacilities: row.weightFacilities ?? DEFAULT_WEIGHT_FACILITIES,
+    weightRating: row.weightRating ?? DEFAULT_WEIGHT_RATING,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -191,6 +210,7 @@ export const getProfileMatchingRecommendations = async (
     };
 
     // Use default preferences if user has none
+    // Bobot default menggunakan hasil perhitungan ROC
     const effectivePreferences: UserPreferencesData = preferences ?? {
       id: 0,
       userId,
@@ -205,10 +225,10 @@ export const getProfileMatchingRecommendations = async (
       roomType: 'any',
       minRating: 3.0,
       needsAvailableRoom: true,
-      weightPrice: 30,
-      weightLocation: 25,
-      weightFacilities: 25,
-      weightRating: 20,
+      weightPrice: DEFAULT_WEIGHT_PRICE,
+      weightLocation: DEFAULT_WEIGHT_LOCATION,
+      weightFacilities: DEFAULT_WEIGHT_FACILITIES,
+      weightRating: DEFAULT_WEIGHT_RATING,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
