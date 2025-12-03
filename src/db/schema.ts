@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, pgEnum, boolean, decimal, doublePrecision } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, integer, timestamp, pgEnum, boolean, decimal, doublePrecision, varchar } from 'drizzle-orm/pg-core';
 
 // Enum untuk user role
 export const userRoleEnum = pgEnum('user_role', ['ADMIN', 'SELLER', 'RENTER']);
@@ -116,6 +116,48 @@ export const bookingStatusHistory = pgTable('booking_status_history', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+// Enum untuk room type preference
+export const roomTypeEnum = pgEnum('room_type', ['single', 'shared', 'any']);
+
+// User Preferences table for Profile Matching SPK
+export const userPreferences = pgTable('user_preferences', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }).unique().notNull(),
+  
+  // Budget Preferences (Core Factor)
+  budgetMin: integer('budget_min'), // Minimum budget in IDR (null = no minimum)
+  budgetMax: integer('budget_max'), // Maximum budget in IDR (null = no maximum)
+  
+  // Location Preferences (Core Factor)
+  preferredCities: text('preferred_cities'), // JSON array of preferred cities
+  preferredLatitude: doublePrecision('preferred_latitude'), // User's preferred location lat
+  preferredLongitude: doublePrecision('preferred_longitude'), // User's preferred location lng
+  maxDistanceKm: decimal('max_distance_km', { precision: 5, scale: 2 }), // Maximum distance in km
+  
+  // Facilities Preferences (Secondary Factor)
+  requiredFacilities: text('required_facilities'), // JSON array of must-have facilities
+  optionalFacilities: text('optional_facilities'), // JSON array of nice-to-have facilities
+  
+  // Room Preferences (Secondary Factor)
+  roomType: varchar('room_type', { length: 20 }).default('any'), // 'single', 'shared', 'any'
+  
+  // Quality Preferences (Core Factor)
+  minRating: decimal('min_rating', { precision: 2, scale: 1 }).default('3.0'), // Minimum acceptable rating (1.0-5.0)
+  
+  // Availability Preferences
+  needsAvailableRoom: boolean('needs_available_room').default(true),
+  
+  // Weighting Preferences (user-defined weights, should sum to 100)
+  weightPrice: integer('weight_price').default(30), // Weight for price matching (0-100)
+  weightLocation: integer('weight_location').default(25), // Weight for location matching
+  weightFacilities: integer('weight_facilities').default(25), // Weight for facilities matching
+  weightRating: integer('weight_rating').default(20), // Weight for rating matching
+  
+  // Metadata
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -140,3 +182,6 @@ export type NewBooking = typeof bookings.$inferInsert;
 
 export type BookingStatusHistory = typeof bookingStatusHistory.$inferSelect;
 export type NewBookingStatusHistory = typeof bookingStatusHistory.$inferInsert;
+
+export type UserPreference = typeof userPreferences.$inferSelect;
+export type NewUserPreference = typeof userPreferences.$inferInsert;
