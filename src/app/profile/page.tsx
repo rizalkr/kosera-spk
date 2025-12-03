@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
+import Header from '@/components/layouts/Header';
 import { LoginRequired } from '@/components/auth/LoginRequired';
 import UpdatePasswordModal from '@/components/modals/UpdatePasswordModal';
 import { showSuccess } from '@/lib/sweetalert';
@@ -141,6 +142,7 @@ export default function ProfilePage() {
 
   return (
     <LoginRequired>
+      <Header />
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-teal-50 pt-24 pb-12">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Profile Header Card */}
