@@ -169,7 +169,7 @@ export default function RecommendationsPage() {
                   setMinScore(Number(e.target.value));
                   setPage(1);
                 }}
-                className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="px-3 text-gray-500 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
               >
                 <option value={0}>Semua</option>
                 <option value={2}>2.0+ (Kurang Cocok)</option>
