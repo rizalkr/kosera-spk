@@ -66,6 +66,7 @@ export default function Header() {
         break;
       case 'RENTER':
         items.push(
+          { label: 'Rekomendasi', href: '/recommendations' },
           { label: 'Bookings', href: '/bookings' },
           { label: 'Favorit', href: '/favorites' },
           { label: 'Profil', href: '/profile' }
