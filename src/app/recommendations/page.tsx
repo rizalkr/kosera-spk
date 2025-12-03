@@ -224,17 +224,17 @@ export default function RecommendationsPage() {
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={!pagination.hasPrev}
-                className="px-4 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                className="px-4 text-gray-600 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
               >
                 Sebelumnya
               </button>
-              <span className="px-4 py-2 text-gray-600">
+              <span className="px-4  py-2 text-gray-600">
                 Halaman {pagination.page} dari {pagination.totalPages}
               </span>
               <button
                 onClick={() => setPage((p) => p + 1)}
                 disabled={!pagination.hasNext}
-                className="px-4 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                className="px-4 text-gray-600 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
               >
                 Selanjutnya
               </button>

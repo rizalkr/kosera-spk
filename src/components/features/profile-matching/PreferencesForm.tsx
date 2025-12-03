@@ -170,7 +170,7 @@ export const PreferencesForm = ({ onSuccess, onCancel, className = '' }: Prefere
               value={formData.budgetMin ?? ''}
               onChange={(e) => setFormData({ ...formData, budgetMin: e.target.value ? Number(e.target.value) : null })}
               placeholder="Contoh: 500000"
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full text-gray-600 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
           <div>
@@ -182,7 +182,7 @@ export const PreferencesForm = ({ onSuccess, onCancel, className = '' }: Prefere
               value={formData.budgetMax ?? ''}
               onChange={(e) => setFormData({ ...formData, budgetMax: e.target.value ? Number(e.target.value) : null })}
               placeholder="Contoh: 2000000"
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full text-gray-600 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
         </div>
