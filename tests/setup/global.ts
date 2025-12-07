@@ -17,6 +17,10 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
+  // Skip database reset for pure unit tests
+  if (process.env.SKIP_DB_RESET === '1') {
+    return;
+  }
   if (process.env.INTEGRATION_PERSIST === '1') {
     return; // allow state to persist across tests in a file
   }
