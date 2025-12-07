@@ -1,4 +1,6 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+// Use relative URL by default for same-origin requests
+// Set NEXT_PUBLIC_API_URL only if API is on different domain
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 export const getAuthToken = (): string | null => {
   if (typeof window !== 'undefined') {
