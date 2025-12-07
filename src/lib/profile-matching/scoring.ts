@@ -181,14 +181,13 @@ export const getFacilitiesLevel = (fulfillmentPercentage: number): number => {
 /**
  * Hitung skor harga menggunakan metode Profile Matching (GAP)
  * 
- * Untuk kriteria COST (harga), semakin rendah semakin baik.
- * GAP = Level Budget User - Level Harga Kos
+ * Untuk kriteria COST (harga), logika ekonomi pencari kos:
+ * - Lebih murah dari budget = BAGUS (hemat uang)
+ * - Pas dengan budget = IDEAL
+ * - Lebih mahal dari budget = BURUK
  * 
- * Contoh:
- * - Budget user Rp 1.500.000 (Level 3), Harga kos Rp 1.200.000 (Level 3)
- *   GAP = 3 - 3 = 0 -> Bobot 5.0 (Ideal)
- * - Budget user Rp 1.500.000 (Level 3), Harga kos Rp 2.000.000 (Level 4)
- *   GAP = 3 - 4 = -1 -> Bobot 4.0 (Sedikit melebihi budget)
+ * PATCH: Karena "lebih murah" seharusnya tidak dipenalti,
+ * GAP positif (kos lebih murah) dianggap sama dengan GAP 0 (ideal).
  * 
  * @param price - Harga kos per bulan
  * @param budgetMin - Budget minimum user (nullable)
@@ -211,8 +210,16 @@ export const calculatePriceScore = (
   const kosLevel = getPriceLevel(price);
   const userLevel = getPriceLevel(targetBudget);
   
-  // GAP = Level User - Level Kos (untuk cost, user ingin kos <= budget)
-  const gap = userLevel - kosLevel;
+  // GAP = Level User - Level Kos
+  // Gap positif = kos lebih murah dari budget
+  // Gap negatif = kos lebih mahal dari budget
+  let gap = userLevel - kosLevel;
+  
+  // PATCH: Untuk kriteria COST, "lebih murah" tidak boleh dipenalti
+  // Jika gap > 0 (kos lebih murah), anggap sebagai ideal (gap = 0)
+  if (gap > 0) {
+    gap = 0;
+  }
   
   const score = convertGapToWeight(gap);
   
