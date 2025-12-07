@@ -308,7 +308,8 @@ export class ApiClient {
 
 /**
  * Default API client instance
+ * Uses relative URL by default for same-origin requests
  */
 export const apiClient = new ApiClient({
-  baseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
+  baseUrl: process.env.NEXT_PUBLIC_API_URL || '',
 });
