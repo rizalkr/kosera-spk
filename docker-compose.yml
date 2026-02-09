@@ -1,9 +1,10 @@
 # Docker Compose for Kosera API Development
+# Updated: Added pgvector support for AI-Enhanced DSS
 
 services:
-  # PostgreSQL Database
+  # PostgreSQL Database with pgvector extension
   db:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     container_name: kosera-db
     restart: unless-stopped
     ports:
@@ -24,9 +25,9 @@ services:
       timeout: 10s
       retries: 5
 
-  # PostgreSQL Test Database (Isolated)
+  # PostgreSQL Test Database with pgvector (Isolated)
   db_test:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     container_name: kosera-db-test
     restart: unless-stopped
     profiles:
