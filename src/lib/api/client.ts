@@ -90,17 +90,33 @@ export class ApiClient {
    * Build full URL with query parameters
    */
   private buildUrl(endpoint: string, params?: Record<string, unknown>): string {
-    const url = new URL(endpoint.startsWith('/') ? endpoint.slice(1) : endpoint, this.config.baseUrl);
+    let fullUrl: string;
     
-    if (params) {
+    // Handle relative URLs (when baseUrl is empty or not set)
+    if (!this.config.baseUrl || this.config.baseUrl === '') {
+      // For relative URLs, just use the endpoint directly
+      fullUrl = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    } else {
+      // For absolute URLs, use URL constructor
+      const url = new URL(endpoint.startsWith('/') ? endpoint.slice(1) : endpoint, this.config.baseUrl);
+      fullUrl = url.toString();
+    }
+    
+    // Add query parameters
+    if (params && Object.keys(params).length > 0) {
+      const searchParams = new URLSearchParams();
       Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined && value !== null && value !== '') {
-          url.searchParams.set(key, String(value));
+          searchParams.set(key, String(value));
         }
       });
+      const queryString = searchParams.toString();
+      if (queryString) {
+        fullUrl += (fullUrl.includes('?') ? '&' : '?') + queryString;
+      }
     }
 
-    return url.toString();
+    return fullUrl;
   }
 
   /**

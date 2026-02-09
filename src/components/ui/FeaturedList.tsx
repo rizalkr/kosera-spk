@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import FeaturedCard from './FeaturedCard';
 import { useKosFeatured, useFavorites } from '@/hooks/useApi';
 import { FavoriteKos, PublicKosData } from '@/types';
@@ -8,6 +8,13 @@ import { FavoriteKos, PublicKosData } from '@/types';
 export default function FeaturedList() {
   const { data, isLoading, error } = useKosFeatured();
   const { data: favoritesData } = useFavorites();
+
+  // Debug logging
+  useEffect(() => {
+    console.log('[FeaturedList] isLoading:', isLoading);
+    console.log('[FeaturedList] error:', error);
+    console.log('[FeaturedList] data:', data);
+  }, [isLoading, error, data]);
 
   // Extract favorite kos IDs - memoized to prevent infinite loops
   const favoriteKosIds = useMemo(() => {
