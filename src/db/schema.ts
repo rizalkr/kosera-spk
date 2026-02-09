@@ -1,4 +1,20 @@
-import { pgTable, serial, text, integer, timestamp, pgEnum, boolean, decimal, doublePrecision, varchar } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, integer, timestamp, pgEnum, boolean, decimal, doublePrecision, varchar, customType } from 'drizzle-orm/pg-core';
+
+// Custom type for pgvector - stores embeddings as float arrays
+// Dimension 384 matches the output of all-MiniLM-L6-v2 model
+export const vector = customType<{ data: number[]; driverData: string }>({
+  dataType() {
+    return 'vector(384)';
+  },
+  toDriver(value: number[]): string {
+    return `[${value.join(',')}]`;
+  },
+  fromDriver(value: string): number[] {
+    // Parse PostgreSQL vector format: [0.1,0.2,0.3,...]
+    const cleaned = value.replace(/[\[\]]/g, '');
+    return cleaned.split(',').map(Number);
+  },
+});
 
 // Enum untuk user role
 export const userRoleEnum = pgEnum('user_role', ['ADMIN', 'SELLER', 'RENTER']);
@@ -55,6 +71,10 @@ export const kos = pgTable('kos', {
   // Geospatial coordinates (optional)
   latitude: doublePrecision('latitude'),
   longitude: doublePrecision('longitude'),
+  // AI-Enhanced DSS fields (for semantic search)
+  // Nullable for backward compatibility with existing data
+  descriptionFull: text('description_full'), // Combined text for AI embedding
+  embedding: vector('embedding'), // Vector embedding from all-MiniLM-L6-v2 (384 dimensions)
   // Soft delete fields for kos
   deletedAt: timestamp('deleted_at'),
   deletedBy: integer('deleted_by'),
