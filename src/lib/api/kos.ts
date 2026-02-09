@@ -38,7 +38,15 @@ export const createKos = async (payload: CreateKosRequest): Promise<CreateKosRes
 
 export const kosApi = {
   getFeatured: async (): Promise<ApiResponse<PublicKosData[]>> => {
-    return apiClient.get('/api/kos/featured');
+    console.log('[kosApi] getFeatured - calling /api/kos/featured');
+    try {
+      const response = await apiClient.get<ApiResponse<PublicKosData[]>>('/api/kos/featured');
+      console.log('[kosApi] getFeatured - response:', response);
+      return response;
+    } catch (error) {
+      console.error('[kosApi] getFeatured - error:', error);
+      throw error;
+    }
   },
   getRecommendations: async (params: SearchParams = {}): Promise<KosSearchApiResponse> => {
     return apiClient.get(`/api/kos/recommendations`, params as Record<string, unknown>);
