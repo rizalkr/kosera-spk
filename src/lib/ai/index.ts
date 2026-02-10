@@ -4,6 +4,7 @@
  * Provides AI-enhanced functionality for the DSS including:
  * - Text vectorization for semantic search
  * - Embedding generation and storage for kos listings
+ * - Semantic similarity search
  *
  * @module lib/ai
  */
@@ -25,3 +26,9 @@ export {
   reindexKos,
   getIndexingStats,
 } from './indexer';
+
+// Semantic Search
+export {
+  semanticSearch,
+  findSimilarKos,
+} from './search';
