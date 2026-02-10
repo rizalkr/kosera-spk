@@ -62,6 +62,7 @@ services:
       - DATABASE_URL=postgresql://kosera:kosera123@db:5432/kosera
       - JWT_SECRET=your-super-secret-jwt-key-for-development
       - PORT=3000
+      - AI_SERVICE_URL=http://ai-service:8000
     ports:
       - "3000:3000"
     volumes:
@@ -72,9 +73,35 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      ai-service:
+        condition: service_healthy
     networks:
       - kosera-network
     command: ["npm", "run", "dev"]
+
+  # AI Service (Python FastAPI for text embedding)
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    container_name: kosera-ai-service
+    restart: unless-stopped
+    environment:
+      - TRANSFORMERS_CACHE=/app/models
+      - HF_HOME=/app/models
+    ports:
+      - "8000:8000"
+    volumes:
+      # Persist model cache to avoid re-download
+      - ai_models:/app/models
+    networks:
+      - kosera-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
 
   # pgAdmin (Optional - Database Management UI)
   pgadmin:
@@ -100,6 +127,8 @@ volumes:
   postgres_test_data:
     driver: local
   pgadmin_data:
+    driver: local
+  ai_models:
     driver: local
 
 networks:
