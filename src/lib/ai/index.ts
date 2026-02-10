@@ -5,6 +5,7 @@
  * - Text vectorization for semantic search
  * - Embedding generation and storage for kos listings
  * - Semantic similarity search
+ * - Hybrid recommendation algorithm (PM-SPK + AI)
  *
  * @module lib/ai
  */
@@ -32,3 +33,10 @@ export {
   semanticSearch,
   findSimilarKos,
 } from './search';
+
+// Hybrid Algorithm
+export {
+  getHybridRecommendations,
+  DEFAULT_HYBRID_WEIGHT_PM,
+  DEFAULT_HYBRID_WEIGHT_AI,
+} from './hybrid';
