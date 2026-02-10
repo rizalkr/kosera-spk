@@ -1,0 +1,292 @@
+/**
+ * AI Embedding Indexer Service
+ *
+ * Service for generating and storing AI embeddings for kos listings.
+ * Combines kos data into rich text descriptions and vectorizes them
+ * for semantic similarity search.
+ *
+ * @module lib/ai/indexer
+ */
+
+import { db } from '@/db';
+import { kos, posts } from '@/db/schema';
+import { eq, isNull, and, sql } from 'drizzle-orm';
+import { vectorize, vectorizeBatch, AIServiceError } from './client';
+
+/** Kos data needed for building embedding text */
+interface KosIndexData {
+  id: number;
+  name: string;
+  address: string;
+  city: string;
+  facilities: string | null;
+  postTitle: string;
+  postDescription: string;
+  price: number;
+  totalRooms: number;
+  occupiedRooms: number | null;
+}
+
+/** Result of indexing operation */
+interface IndexResult {
+  kosId: number;
+  success: boolean;
+  error?: string;
+}
+
+/** Batch indexing summary */
+interface IndexingSummary {
+  totalProcessed: number;
+  successful: number;
+  failed: number;
+  results: IndexResult[];
+}
+
+/**
+ * Build a rich text description for AI embedding
+ *
+ * Combines all relevant kos information into a single text string
+ * that captures semantic meaning for similarity search.
+ *
+ * @param data - Kos and post data
+ * @returns Combined text for embedding
+ */
+export const buildEmbeddingText = (data: KosIndexData): string => {
+  const parts: string[] = [];
+
+  // Basic information
+  parts.push(`Kos ${data.name} berlokasi di ${data.address}, ${data.city}.`);
+
+  // Price and rooms
+  const priceFormatted = new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    maximumFractionDigits: 0,
+  }).format(data.price);
+
+  const availableRooms = data.totalRooms - (data.occupiedRooms || 0);
+  parts.push(
+    `Harga sewa ${priceFormatted} per bulan dengan ${availableRooms} kamar tersedia dari ${data.totalRooms} total kamar.`
+  );
+
+  // Post details
+  parts.push(data.postTitle);
+  parts.push(data.postDescription);
+
+  // Facilities
+  if (data.facilities) {
+    parts.push(`Fasilitas yang tersedia: ${data.facilities}.`);
+  }
+
+  return parts.join(' ').trim();
+};
+
+/**
+ * Fetch kos listings that need embedding generation
+ *
+ * @param limit - Maximum number of kos to fetch
+ * @returns Array of kos data for indexing
+ */
+export const getKosWithoutEmbedding = async (
+  limit: number = 50
+): Promise<KosIndexData[]> => {
+  const result = await db
+    .select({
+      id: kos.id,
+      name: kos.name,
+      address: kos.address,
+      city: kos.city,
+      facilities: kos.facilities,
+      totalRooms: kos.totalRooms,
+      occupiedRooms: kos.occupiedRooms,
+      postTitle: posts.title,
+      postDescription: posts.description,
+      price: posts.price,
+    })
+    .from(kos)
+    .innerJoin(posts, eq(kos.postId, posts.id))
+    .where(
+      and(
+        isNull(kos.embedding), // No embedding yet
+        isNull(kos.deletedAt), // Not soft-deleted
+        isNull(posts.deletedAt) // Post not soft-deleted
+      )
+    )
+    .limit(limit);
+
+  return result;
+};
+
+/**
+ * Index a single kos listing
+ *
+ * Generates embedding and stores it in the database.
+ *
+ * @param kosId - ID of kos to index
+ * @returns Result of indexing operation
+ */
+export const indexSingleKos = async (kosId: number): Promise<IndexResult> => {
+  try {
+    // Fetch kos data
+    const result = await db
+      .select({
+        id: kos.id,
+        name: kos.name,
+        address: kos.address,
+        city: kos.city,
+        facilities: kos.facilities,
+        totalRooms: kos.totalRooms,
+        occupiedRooms: kos.occupiedRooms,
+        postTitle: posts.title,
+        postDescription: posts.description,
+        price: posts.price,
+      })
+      .from(kos)
+      .innerJoin(posts, eq(kos.postId, posts.id))
+      .where(eq(kos.id, kosId))
+      .limit(1);
+
+    if (result.length === 0) {
+      return { kosId, success: false, error: 'Kos not found' };
+    }
+
+    const kosData = result[0];
+    const embeddingText = buildEmbeddingText(kosData);
+
+    // Generate embedding
+    const vectorResult = await vectorize(embeddingText);
+
+    // Store embedding and full text in database
+    await db
+      .update(kos)
+      .set({
+        descriptionFull: embeddingText,
+        embedding: vectorResult.embedding,
+      })
+      .where(eq(kos.id, kosId));
+
+    return { kosId, success: true };
+  } catch (error) {
+    const errorMessage =
+      error instanceof AIServiceError
+        ? error.detail || error.message
+        : error instanceof Error
+          ? error.message
+          : 'Unknown error';
+
+    return { kosId, success: false, error: errorMessage };
+  }
+};
+
+/**
+ * Index multiple kos listings in batch
+ *
+ * More efficient than individual indexing for bulk operations.
+ * Processes kos in batches to avoid memory issues.
+ *
+ * @param batchSize - Number of kos to process per batch
+ * @param maxTotal - Maximum total kos to process
+ * @returns Summary of indexing operation
+ */
+export const indexBatch = async (
+  batchSize: number = 20,
+  maxTotal: number = 100
+): Promise<IndexingSummary> => {
+  const results: IndexResult[] = [];
+  let processed = 0;
+
+  while (processed < maxTotal) {
+    // Fetch next batch of kos without embeddings
+    const kosList = await getKosWithoutEmbedding(
+      Math.min(batchSize, maxTotal - processed)
+    );
+
+    if (kosList.length === 0) {
+      break; // No more kos to process
+    }
+
+    // Build embedding texts
+    const texts = kosList.map(buildEmbeddingText);
+
+    try {
+      // Batch vectorize
+      const batchResult = await vectorizeBatch(texts);
+
+      // Store embeddings in database
+      for (let i = 0; i < kosList.length; i++) {
+        const kosData = kosList[i];
+        const embeddingResult = batchResult.results[i];
+
+        await db
+          .update(kos)
+          .set({
+            descriptionFull: texts[i],
+            embedding: embeddingResult.embedding,
+          })
+          .where(eq(kos.id, kosData.id));
+
+        results.push({ kosId: kosData.id, success: true });
+      }
+    } catch (error) {
+      // If batch fails, fallback to individual processing
+      console.error('Batch vectorization failed, falling back to individual:', error);
+
+      for (let i = 0; i < kosList.length; i++) {
+        const result = await indexSingleKos(kosList[i].id);
+        results.push(result);
+      }
+    }
+
+    processed += kosList.length;
+  }
+
+  const successful = results.filter((r) => r.success).length;
+  const failed = results.filter((r) => !r.success).length;
+
+  return {
+    totalProcessed: processed,
+    successful,
+    failed,
+    results,
+  };
+};
+
+/**
+ * Reindex a specific kos (update existing embedding)
+ *
+ * Use this when kos data has changed and embedding needs refresh.
+ *
+ * @param kosId - ID of kos to reindex
+ * @returns Result of reindexing operation
+ */
+export const reindexKos = async (kosId: number): Promise<IndexResult> => {
+  // Same as indexSingleKos - it will overwrite existing embedding
+  return indexSingleKos(kosId);
+};
+
+/**
+ * Get indexing status/statistics
+ *
+ * @returns Object with counts of indexed vs unindexed kos
+ */
+export const getIndexingStats = async (): Promise<{
+  total: number;
+  indexed: number;
+  unindexed: number;
+  percentComplete: number;
+}> => {
+  const result = await db
+    .select({
+      total: sql<number>`count(*)`,
+      indexed: sql<number>`count(${kos.embedding})`,
+    })
+    .from(kos)
+    .where(isNull(kos.deletedAt));
+
+  const total = Number(result[0].total);
+  const indexed = Number(result[0].indexed);
+  const unindexed = total - indexed;
+  const percentComplete = total > 0 ? Math.round((indexed / total) * 100) : 0;
+
+  return { total, indexed, unindexed, percentComplete };
+};
