@@ -6,9 +6,14 @@ Endpoints:
 - GET /health - Health check
 - POST /vectorize - Generate embedding for single text
 - POST /vectorize/batch - Generate embeddings for multiple texts
+
+Model: paraphrase-multilingual-MiniLM-L12-v2
+- Supports 50+ languages including Indonesian
+- Output dimension: 384
 """
 
 import os
+from contextlib import asynccontextmanager
 from typing import List
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,15 +21,54 @@ from pydantic import BaseModel, Field
 from sentence_transformers import SentenceTransformer
 
 # Configuration
-MODEL_NAME = "all-MiniLM-L6-v2"
+MODEL_NAME = "paraphrase-multilingual-MiniLM-L12-v2"
 CACHE_DIR = os.environ.get("TRANSFORMERS_CACHE", "/app/models")
-EMBEDDING_DIMENSION = 384  # Output dimension for all-MiniLM-L6-v2
+EMBEDDING_DIMENSION = 384  # Output dimension for multilingual-MiniLM-L12-v2
 
-# Initialize FastAPI app
+# Global model storage
+ml_models: dict = {}
+
+
+# ============================================================
+# Lifespan Context Manager (Modern Startup/Shutdown)
+# ============================================================
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Modern lifespan handler for FastAPI.
+    Replaces deprecated @app.on_event("startup") and @app.on_event("shutdown")
+    """
+    # Startup: Load model
+    print("=" * 50)
+    print("Kosera AI Service Starting...")
+    print(f"Loading model: {MODEL_NAME}")
+    print(f"Cache directory: {CACHE_DIR}")
+    
+    try:
+        ml_models["encoder"] = SentenceTransformer(MODEL_NAME, cache_folder=CACHE_DIR)
+        print(f"Model loaded successfully!")
+        print(f"Embedding dimension: {EMBEDDING_DIMENSION}")
+        print("=" * 50)
+    except Exception as e:
+        print(f"CRITICAL ERROR: Failed to load model - {e}")
+        # Let container fail so orchestrator can restart it
+        raise
+    
+    yield  # Application runs here
+    
+    # Shutdown: Cleanup
+    print("Kosera AI Service Shutting Down...")
+    ml_models.clear()
+    print("Model unloaded.")
+
+
+# Initialize FastAPI app with lifespan
 app = FastAPI(
     title="Kosera AI Service",
     description="Text embedding service for semantic search in Kosera SPK",
-    version="1.0.0"
+    version="1.1.0",
+    lifespan=lifespan
 )
 
 # CORS middleware (for development)
@@ -35,11 +79,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Load model at startup (cached from Docker build)
-print(f"Loading model: {MODEL_NAME} from {CACHE_DIR}")
-model = SentenceTransformer(MODEL_NAME, cache_folder=CACHE_DIR)
-print(f"Model loaded successfully! Embedding dimension: {EMBEDDING_DIMENSION}")
 
 
 # ============================================================
@@ -53,7 +92,12 @@ class TextRequest(BaseModel):
 
 class BatchTextRequest(BaseModel):
     """Request model for batch text vectorization."""
-    texts: List[str] = Field(..., min_items=1, max_items=100, description="List of texts to vectorize")
+    texts: List[str] = Field(
+        ..., 
+        min_length=1, 
+        max_length=100, 
+        description="List of texts to vectorize (max 100)"
+    )
 
 
 class VectorResponse(BaseModel):
@@ -76,6 +120,7 @@ class HealthResponse(BaseModel):
     status: str
     model: str
     dimension: int
+    ready: bool
 
 
 # ============================================================
@@ -85,11 +130,20 @@ class HealthResponse(BaseModel):
 @app.get("/", response_model=HealthResponse)
 @app.get("/health", response_model=HealthResponse)
 def health_check():
-    """Health check endpoint to verify service is running."""
+    """Health check endpoint to verify service is running and model is loaded."""
+    model_ready = "encoder" in ml_models
+    
+    if not model_ready:
+        raise HTTPException(
+            status_code=503, 
+            detail="Model not loaded. Service is starting up."
+        )
+    
     return HealthResponse(
         status="AI Service is running",
         model=MODEL_NAME,
-        dimension=EMBEDDING_DIMENSION
+        dimension=EMBEDDING_DIMENSION,
+        ready=model_ready
     )
 
 
@@ -98,15 +152,23 @@ def generate_vector(payload: TextRequest):
     """
     Generate embedding vector for a single text.
     
-    The model (all-MiniLM-L6-v2) outputs a 384-dimensional vector
-    that captures the semantic meaning of the input text.
+    The model (paraphrase-multilingual-MiniLM-L12-v2) outputs a 384-dimensional 
+    vector that captures the semantic meaning of the input text.
+    Supports Indonesian and 50+ other languages.
     """
+    if "encoder" not in ml_models:
+        raise HTTPException(status_code=503, detail="Model not loaded")
+    
     try:
-        if not payload.text.strip():
-            raise HTTPException(status_code=400, detail="Text cannot be empty or whitespace only")
+        text = payload.text.strip()
+        if not text:
+            raise HTTPException(
+                status_code=400, 
+                detail="Text cannot be empty or whitespace only"
+            )
         
         # Generate embedding (CPU-based, fast for short texts)
-        vector_embedding = model.encode(payload.text).tolist()
+        vector_embedding = ml_models["encoder"].encode(text).tolist()
         
         return VectorResponse(
             status="success",
@@ -116,7 +178,10 @@ def generate_vector(payload: TextRequest):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Embedding generation failed: {str(e)}")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Embedding generation failed: {str(e)}"
+        )
 
 
 @app.post("/vectorize/batch", response_model=BatchVectorResponse)
@@ -124,17 +189,28 @@ def generate_vectors_batch(payload: BatchTextRequest):
     """
     Generate embedding vectors for multiple texts in a single request.
     
-    More efficient than calling /vectorize multiple times due to batching.
+    IMPORTANT: All texts must be non-empty to maintain index alignment.
+    If any text is empty, the request will be rejected with 400 error.
+    This ensures the returned vectors array matches the input texts array 1:1.
+    
     Maximum 100 texts per request.
     """
+    if "encoder" not in ml_models:
+        raise HTTPException(status_code=503, detail="Model not loaded")
+    
     try:
-        # Validate texts are not empty
-        valid_texts = [t.strip() for t in payload.texts if t.strip()]
-        if not valid_texts:
-            raise HTTPException(status_code=400, detail="All texts are empty or whitespace only")
+        # CRITICAL: Validate all texts to maintain index alignment
+        # Do NOT filter out empty texts as it would misalign the response
+        for index, text in enumerate(payload.texts):
+            if not text.strip():
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Item at index {index} is empty. All batch items must be valid non-empty text."
+                )
         
         # Generate embeddings in batch (much faster than individual calls)
-        vectors = model.encode(valid_texts).tolist()
+        # Index alignment is preserved: vectors[i] corresponds to texts[i]
+        vectors = ml_models["encoder"].encode(payload.texts).tolist()
         
         return BatchVectorResponse(
             status="success",
@@ -145,27 +221,10 @@ def generate_vectors_batch(payload: BatchTextRequest):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Batch embedding generation failed: {str(e)}")
-
-
-# ============================================================
-# Startup/Shutdown Events
-# ============================================================
-
-@app.on_event("startup")
-async def startup_event():
-    """Log startup information."""
-    print("=" * 50)
-    print("Kosera AI Service Started")
-    print(f"Model: {MODEL_NAME}")
-    print(f"Embedding Dimension: {EMBEDDING_DIMENSION}")
-    print("=" * 50)
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Cleanup on shutdown."""
-    print("Kosera AI Service Shutting Down")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Batch embedding generation failed: {str(e)}"
+        )
 
 
 # ============================================================

@@ -4,7 +4,16 @@ Python microservice for text embedding generation using Sentence Transformers.
 
 ## Overview
 
-This service provides semantic text embedding capabilities for the Kosera SPK (Decision Support System). It uses the `all-MiniLM-L6-v2` model to convert text descriptions into 384-dimensional vectors for similarity search.
+This service provides semantic text embedding capabilities for the Kosera SPK (Decision Support System). It uses the `paraphrase-multilingual-MiniLM-L12-v2` model to convert text descriptions into 384-dimensional vectors for similarity search.
+
+## Model Information
+
+- **Model**: `paraphrase-multilingual-MiniLM-L12-v2`
+- **Size**: ~480MB
+- **Dimension**: 384
+- **Languages**: 50+ languages including **Indonesian**, English, etc.
+- **Speed**: ~10ms per text (CPU)
+- **Use Case**: Multilingual semantic similarity, text search
 
 ## Endpoints
 
@@ -13,7 +22,7 @@ This service provides semantic text embedding capabilities for the Kosera SPK (D
 | GET | `/` | Health check |
 | GET | `/health` | Health check |
 | POST | `/vectorize` | Generate embedding for single text |
-| POST | `/vectorize/batch` | Generate embeddings for multiple texts |
+| POST | `/vectorize/batch` | Generate embeddings for multiple texts (max 100) |
 
 ## API Examples
 
@@ -27,8 +36,9 @@ Response:
 ```json
 {
   "status": "AI Service is running",
-  "model": "all-MiniLM-L6-v2",
-  "dimension": 384
+  "model": "paraphrase-multilingual-MiniLM-L12-v2",
+  "dimension": 384,
+  "ready": true
 }
 ```
 
@@ -67,6 +77,9 @@ Response:
 }
 ```
 
+**IMPORTANT**: Batch endpoint maintains index alignment. All texts must be non-empty.
+If any text is empty, the request will be rejected with 400 error.
+
 ## Local Development
 
 ### Without Docker
@@ -81,7 +94,7 @@ source venv/bin/activate  # Linux/Mac
 # Install dependencies
 pip install -r requirements.txt
 
-# Download model (first time only)
+# Download model (first time only, ~480MB)
 python download_model.py
 
 # Run the service
@@ -91,20 +104,12 @@ uvicorn main:app --reload --port 8000
 ### With Docker
 
 ```bash
-# Build image
+# Build image (includes model download)
 docker build -t kosera-ai-service .
 
 # Run container
 docker run -p 8000:8000 kosera-ai-service
 ```
-
-## Model Information
-
-- **Model**: `all-MiniLM-L6-v2`
-- **Size**: ~80MB
-- **Dimension**: 384
-- **Speed**: ~5ms per text (CPU)
-- **Use Case**: Semantic similarity, text search
 
 ## Architecture
 
@@ -115,7 +120,7 @@ Next.js App (Port 3000)
        v
 AI Service (Port 8000)
        |
-       | Sentence Transformers
+       | Sentence Transformers (multilingual)
        v
 384-dim Vector
        |
@@ -130,3 +135,21 @@ pgvector (cosine similarity search)
 |----------|---------|-------------|
 | `TRANSFORMERS_CACHE` | `/app/models` | Model cache directory |
 | `HF_HOME` | `/app/models` | Hugging Face home directory |
+
+## Why Multilingual Model?
+
+The `paraphrase-multilingual-MiniLM-L12-v2` model is chosen because:
+
+1. **Indonesian Support**: Native support for Bahasa Indonesia
+2. **Cross-lingual**: Can match Indonesian query with English description and vice versa
+3. **Same Dimension**: Still outputs 384 dimensions (same as MiniLM-L6-v2)
+4. **Good Performance**: Slightly larger but excellent quality for multilingual use cases
+
+## Error Handling
+
+| Status Code | Meaning |
+|-------------|---------|
+| 200 | Success |
+| 400 | Bad Request (empty text, invalid input) |
+| 500 | Internal Server Error |
+| 503 | Service Unavailable (model not loaded) |
