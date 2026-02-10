@@ -72,6 +72,8 @@ export const ERROR_CODES = {
   upstream_unavailable: 'upstream_unavailable',
   network_error: 'network_error',
   rate_limited: 'rate_limited',
+  ai_service_unavailable: 'ai_service_unavailable',
+  ai_indexing_failed: 'ai_indexing_failed',
 
   // Generic
   internal_error: 'internal_error',
