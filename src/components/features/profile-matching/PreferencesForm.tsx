@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { usePreferencesManager } from '@/hooks/profile-matching';
+import { useGeolocation } from '@/hooks/useGeolocation';
 import { AVAILABLE_CITIES, AVAILABLE_FACILITIES } from '@/types/profile-matching';
 import type { UserPreferencesInput } from '@/types/profile-matching';
 import { showSuccess, showError } from '@/lib/sweetalert';
@@ -20,12 +21,16 @@ interface PreferencesFormProps {
  */
 export const PreferencesForm = ({ onSuccess, onCancel, className = '' }: PreferencesFormProps) => {
   const { preferences, isLoading, savePreferences, isSaving } = usePreferencesManager();
+  const geolocation = useGeolocation();
 
   // Form state
   const [formData, setFormData] = useState<UserPreferencesInput>({
     budgetMin: null,
     budgetMax: null,
     preferredCities: [],
+    preferredLatitude: null,
+    preferredLongitude: null,
+    maxDistanceKm: 10,
     requiredFacilities: [],
     optionalFacilities: [],
     roomType: 'any',
@@ -37,6 +42,9 @@ export const PreferencesForm = ({ onSuccess, onCancel, className = '' }: Prefere
     weightRating: 20,
   });
 
+  // Track if using geolocation
+  const [useCurrentLocation, setUseCurrentLocation] = useState(false);
+
   // Initialize form with existing preferences
   useEffect(() => {
     if (preferences) {
@@ -44,6 +52,9 @@ export const PreferencesForm = ({ onSuccess, onCancel, className = '' }: Prefere
         budgetMin: preferences.budgetMin,
         budgetMax: preferences.budgetMax,
         preferredCities: preferences.preferredCities,
+        preferredLatitude: preferences.preferredLatitude ?? null,
+        preferredLongitude: preferences.preferredLongitude ?? null,
+        maxDistanceKm: preferences.maxDistanceKm ?? 10,
         requiredFacilities: preferences.requiredFacilities,
         optionalFacilities: preferences.optionalFacilities,
         roomType: preferences.roomType,
@@ -54,8 +65,40 @@ export const PreferencesForm = ({ onSuccess, onCancel, className = '' }: Prefere
         weightFacilities: preferences.weightFacilities,
         weightRating: preferences.weightRating,
       });
+      // Check if preferences have coordinates
+      if (preferences.preferredLatitude && preferences.preferredLongitude) {
+        setUseCurrentLocation(true);
+      }
     }
   }, [preferences]);
+
+  // Update form when geolocation changes
+  useEffect(() => {
+    if (useCurrentLocation && geolocation.hasLocation) {
+      setFormData((prev) => ({
+        ...prev,
+        preferredLatitude: geolocation.latitude,
+        preferredLongitude: geolocation.longitude,
+      }));
+    }
+  }, [useCurrentLocation, geolocation.hasLocation, geolocation.latitude, geolocation.longitude]);
+
+  // Handle use current location toggle
+  const handleUseCurrentLocation = () => {
+    if (!useCurrentLocation) {
+      // Request location
+      geolocation.requestLocation();
+      setUseCurrentLocation(true);
+    } else {
+      // Clear location
+      setUseCurrentLocation(false);
+      setFormData((prev) => ({
+        ...prev,
+        preferredLatitude: null,
+        preferredLongitude: null,
+      }));
+    }
+  };
 
   // Handle city selection
   const toggleCity = (city: string) => {
@@ -191,22 +234,112 @@ export const PreferencesForm = ({ onSuccess, onCancel, className = '' }: Prefere
       {/* Location Section */}
       <div className="bg-white p-6 rounded-lg shadow-sm border">
         <h3 className="text-lg font-semibold text-gray-800 mb-4">Lokasi Preferensi</h3>
-        <p className="text-sm text-gray-600 mb-3">Pilih kota yang Anda inginkan:</p>
-        <div className="flex flex-wrap gap-2">
-          {AVAILABLE_CITIES.map((city) => (
+        
+        {/* Geolocation Section */}
+        <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <p className="text-sm font-medium text-gray-700">Lokasi Saat Ini</p>
+              <p className="text-xs text-gray-500">Gunakan lokasi Anda untuk menghitung jarak ke kos</p>
+            </div>
             <button
-              key={city}
               type="button"
-              onClick={() => toggleCity(city)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                formData.preferredCities?.includes(city)
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+              onClick={handleUseCurrentLocation}
+              disabled={geolocation.loading}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                useCurrentLocation
+                  ? 'bg-green-500 text-white hover:bg-green-600'
+                  : 'bg-blue-500 text-white hover:bg-blue-600'
+              } disabled:opacity-50 disabled:cursor-not-allowed`}
             >
-              {city}
+              {geolocation.loading ? (
+                <span className="flex items-center gap-2">
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Mencari...
+                </span>
+              ) : useCurrentLocation ? (
+                'Lokasi Aktif'
+              ) : (
+                'Gunakan Lokasi Saat Ini'
+              )}
             </button>
-          ))}
+          </div>
+
+          {/* Geolocation Status */}
+          {geolocation.error && (
+            <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
+              {geolocation.error.message}
+            </div>
+          )}
+
+          {useCurrentLocation && geolocation.hasLocation && (
+            <div className="text-sm text-green-700 bg-green-50 p-2 rounded">
+              Lokasi terdeteksi: {geolocation.latitude?.toFixed(6)}, {geolocation.longitude?.toFixed(6)}
+              {geolocation.accuracy && (
+                <span className="text-xs ml-2">(akurasi: {Math.round(geolocation.accuracy)}m)</span>
+              )}
+            </div>
+          )}
+
+          {!geolocation.isSupported && (
+            <div className="text-sm text-yellow-700 bg-yellow-50 p-2 rounded">
+              Browser tidak mendukung geolocation. Pilih kota preferensi sebagai alternatif.
+            </div>
+          )}
+        </div>
+
+        {/* Max Distance */}
+        {useCurrentLocation && geolocation.hasLocation && (
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Jarak Maksimum dari Lokasi Anda
+            </label>
+            <div className="flex items-center gap-4">
+              <input
+                type="range"
+                min="1"
+                max="30"
+                step="1"
+                value={formData.maxDistanceKm ?? 10}
+                onChange={(e) => setFormData({ ...formData, maxDistanceKm: Number(e.target.value) })}
+                className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+              />
+              <span className="text-lg font-semibold text-blue-600 min-w-[4rem]">
+                {formData.maxDistanceKm ?? 10} km
+              </span>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Kos di luar jarak ini akan mendapat skor lokasi lebih rendah
+            </p>
+          </div>
+        )}
+
+        {/* City Preferences */}
+        <div>
+          <p className="text-sm text-gray-600 mb-3">
+            {useCurrentLocation && geolocation.hasLocation
+              ? 'Atau pilih kecamatan preferensi (opsional):'
+              : 'Pilih kecamatan yang Anda inginkan:'}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {AVAILABLE_CITIES.map((city) => (
+              <button
+                key={city}
+                type="button"
+                onClick={() => toggleCity(city)}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                  formData.preferredCities?.includes(city)
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {city}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

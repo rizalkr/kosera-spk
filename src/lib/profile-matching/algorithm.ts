@@ -82,6 +82,10 @@ interface ProfileMatchingOptions {
   page?: number;
   limit?: number;
   minScore?: number;
+  /** Fallback latitude from browser geolocation (used if user has no preferences) */
+  fallbackLatitude?: number;
+  /** Fallback longitude from browser geolocation (used if user has no preferences) */
+  fallbackLongitude?: number;
 }
 
 /**
@@ -95,7 +99,7 @@ export const getProfileMatchingRecommendations = async (
   userId: number,
   options: ProfileMatchingOptions = {}
 ): Promise<ProfileMatchingResponse> => {
-  const { page = 1, limit = 10, minScore = 0 } = options;
+  const { page = 1, limit = 10, minScore = 0, fallbackLatitude, fallbackLongitude } = options;
   const offset = (page - 1) * limit;
 
   // 1. Get user preferences
@@ -211,15 +215,17 @@ export const getProfileMatchingRecommendations = async (
 
     // Use default preferences if user has none
     // Bobot default menggunakan hasil perhitungan ROC
+    // If fallback geolocation provided and user has no preferences, use it
     const effectivePreferences: UserPreferencesData = preferences ?? {
       id: 0,
       userId,
       budgetMin: null,
       budgetMax: null,
       preferredCities: [],
-      preferredLatitude: null,
-      preferredLongitude: null,
-      maxDistanceKm: null,
+      // Use fallback geolocation if provided
+      preferredLatitude: fallbackLatitude ?? null,
+      preferredLongitude: fallbackLongitude ?? null,
+      maxDistanceKm: (fallbackLatitude && fallbackLongitude) ? 10 : null, // 10km default radius
       requiredFacilities: [],
       optionalFacilities: [],
       roomType: 'any',

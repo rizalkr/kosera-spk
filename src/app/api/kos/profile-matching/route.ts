@@ -9,6 +9,9 @@ const querySchema = z.object({
   page: z.string().regex(/^\d+$/).optional(),
   limit: z.string().regex(/^\d+$/).optional(),
   min_score: z.string().regex(/^\d+(\.\d+)?$/).optional(),
+  // Geolocation fallback (used when user hasn't set preferences)
+  latitude: z.string().regex(/^-?\d+(\.\d+)?$/).optional(),
+  longitude: z.string().regex(/^-?\d+(\.\d+)?$/).optional(),
 });
 
 /**
@@ -60,6 +63,10 @@ export async function GET(request: Request): Promise<Response> {
     const page = parsed.data.page ? parseInt(parsed.data.page, 10) : 1;
     const limit = parsed.data.limit ? Math.min(parseInt(parsed.data.limit, 10), 50) : 10;
     const minScore = parsed.data.min_score ? parseFloat(parsed.data.min_score) : 0;
+    
+    // Geolocation fallback parameters
+    const latitude = parsed.data.latitude ? parseFloat(parsed.data.latitude) : undefined;
+    const longitude = parsed.data.longitude ? parseFloat(parsed.data.longitude) : undefined;
 
     if (page < 1) {
       return fail(ERROR_CODES.invalid_pagination, 'Page must be >= 1', undefined, { status: 400 });
@@ -83,6 +90,8 @@ export async function GET(request: Request): Promise<Response> {
       page,
       limit,
       minScore,
+      fallbackLatitude: latitude,
+      fallbackLongitude: longitude,
     });
 
     // Build response message

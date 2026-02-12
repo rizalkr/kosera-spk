@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Header from '@/components/layouts/Header';
 import Footer from '@/components/layouts/Footer';
 import ProtectedRoute from '@/components/layouts/ProtectedRoute';
 import { useProfileMatching, useUserPreferences } from '@/hooks/profile-matching';
+import { useGeolocation } from '@/hooks/useGeolocation';
 import { MatchingResultCard } from '@/components/features/profile-matching';
 import Link from 'next/link';
 
@@ -13,23 +14,45 @@ import Link from 'next/link';
  * 
  * Displays personalized kos recommendations based on user preferences
  * using the Profile Matching SPK algorithm.
+ * 
+ * Features:
+ * - Auto-detect location if user hasn't set preferences
+ * - Use browser geolocation as fallback for location scoring
  */
 export default function RecommendationsPage() {
   const [page, setPage] = useState(1);
   const [minScore, setMinScore] = useState(0);
   const limit = 10;
 
+  // Get user preferences and geolocation
   const { data: preferencesData, isLoading: preferencesLoading } = useUserPreferences();
-  const { data: matchingData, isLoading: matchingLoading, error } = useProfileMatching({
-    page,
-    limit,
-    minScore,
-  });
-
+  const geolocation = useGeolocation({ autoDetect: true }); // Auto-detect on mount
+  
   const preferences = preferencesData?.data;
+  const hasPreferences = !!preferences;
+  const hasLocationPreference = !!(preferences?.preferredLatitude && preferences?.preferredLongitude);
+  
+  // Build query params with geolocation fallback
+  const queryParams = useMemo(() => {
+    const params: { page: number; limit: number; minScore: number; latitude?: number; longitude?: number } = {
+      page,
+      limit,
+      minScore,
+    };
+    
+    // If user has no location preference but we have geolocation, use it as fallback
+    if (!hasLocationPreference && geolocation.hasLocation && geolocation.latitude && geolocation.longitude) {
+      params.latitude = geolocation.latitude;
+      params.longitude = geolocation.longitude;
+    }
+    
+    return params;
+  }, [page, limit, minScore, hasLocationPreference, geolocation.hasLocation, geolocation.latitude, geolocation.longitude]);
+
+  const { data: matchingData, isLoading: matchingLoading, error } = useProfileMatching(queryParams);
+
   const recommendations = matchingData?.data?.recommendations ?? [];
   const pagination = matchingData?.data?.pagination;
-  const hasPreferences = !!preferences;
 
   // Loading state
   if (preferencesLoading || matchingLoading) {
@@ -110,10 +133,24 @@ export default function RecommendationsPage() {
                   <h3 className="font-semibold text-yellow-800 mb-1">
                     Preferensi Belum Diatur
                   </h3>
-                  <p className="text-yellow-700 text-sm mb-4">
+                  <p className="text-yellow-700 text-sm mb-2">
                     Atur preferensi Anda untuk mendapatkan rekomendasi yang lebih akurat.
-                    Saat ini menampilkan rekomendasi dengan skor netral.
                   </p>
+                  {/* Geolocation Status */}
+                  {geolocation.hasLocation ? (
+                    <p className="text-green-700 text-sm mb-4">
+                      Lokasi terdeteksi ({geolocation.latitude?.toFixed(4)}, {geolocation.longitude?.toFixed(4)}) - 
+                      menggunakan lokasi Anda untuk menghitung jarak.
+                    </p>
+                  ) : geolocation.loading ? (
+                    <p className="text-blue-700 text-sm mb-4">
+                      Mendeteksi lokasi Anda...
+                    </p>
+                  ) : (
+                    <p className="text-yellow-700 text-sm mb-4">
+                      {geolocation.error?.message || 'Lokasi tidak tersedia. Skor lokasi menggunakan nilai netral.'}
+                    </p>
+                  )}
                   <Link
                     href="/profile/preferences"
                     className="inline-block bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 transition-colors"
