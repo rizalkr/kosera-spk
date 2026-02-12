@@ -87,6 +87,9 @@ export const reviews = pgTable('reviews', {
   userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
   rating: integer('rating').notNull(), // 1-5 rating
   comment: text('comment').notNull(),
+  // Display fields for scraped data
+  reviewerName: text('reviewer_name'), // Original reviewer name (for display)
+  reviewTimeText: text('review_time_text'), // Original time text (e.g., "5 bulan lalu")
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

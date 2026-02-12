@@ -8,6 +8,8 @@ export interface ReviewData {
   comment: string;
   createdAt: string;
   user: { id: number; name: string; username?: string };
+  reviewerName?: string | null; // Original reviewer name from scraping
+  reviewTimeText?: string | null; // Original time text (e.g., "5 bulan lalu")
 }
 
 export interface ReviewsSectionProps {
@@ -35,11 +37,21 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({ totalReviews, av
     {reviews.length > 0 ? (
       <div className="space-y-4">
         {reviews.map(r => (
-          <ReviewItem key={r.id} {...r} formatDate={formatDate} />
+          <ReviewItem 
+            key={r.id} 
+            id={r.id}
+            rating={r.rating}
+            comment={r.comment}
+            createdAt={r.createdAt}
+            user={r.user}
+            reviewerName={r.reviewerName}
+            reviewTimeText={r.reviewTimeText}
+            formatDate={formatDate} 
+          />
         ))}
         {hasNext && (
           <button className="text-blue-600 hover:underline font-medium">
-            Lihat semua ulasan →
+            Lihat semua ulasan
           </button>
         )}
       </div>

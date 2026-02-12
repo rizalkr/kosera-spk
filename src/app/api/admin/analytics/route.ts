@@ -33,11 +33,11 @@ export const GET = withAuth(async (request: AuthenticatedRequest) => {
             averageRating: posts.averageRating,
             reviewCount: posts.reviewCount,
             qualityScore: sql<number>`(
-            ((${posts.averageRating})::double precision * 0.4) +
-            ((${posts.reviewCount})::double precision * 0.2) +
-            ((${posts.favoriteCount})::double precision * 0.2) +
-            ((${posts.photoCount})::double precision * 0.1) +
-            ((${posts.viewCount})::double precision * 0.1)
+            (CAST(${posts.averageRating} AS DECIMAL) / 5.0 * 50) +
+            (LEAST(LOG(GREATEST(${posts.reviewCount}, 1) + 1) / LOG(101), 1) * 20) +
+            (LEAST(LOG(GREATEST(${posts.favoriteCount}, 1) + 1) / LOG(51), 1) * 15) +
+            (LEAST(${posts.photoCount}::DECIMAL / 10, 1) * 10) +
+            (LEAST(LOG(GREATEST(${posts.viewCount}, 1) + 1) / LOG(1001), 1) * 5)
           )::double precision`,
             owner: { name: users.name, username: users.username },
         })
@@ -47,11 +47,11 @@ export const GET = withAuth(async (request: AuthenticatedRequest) => {
         .orderBy(
           desc(
             sql`(
-          ((${posts.averageRating})::double precision * 0.4) +
-          ((${posts.reviewCount})::double precision * 0.2) +
-          ((${posts.favoriteCount})::double precision * 0.2) +
-          ((${posts.photoCount})::double precision * 0.1) +
-          ((${posts.viewCount})::double precision * 0.1)
+            (CAST(${posts.averageRating} AS DECIMAL) / 5.0 * 50) +
+            (LEAST(LOG(GREATEST(${posts.reviewCount}, 1) + 1) / LOG(101), 1) * 20) +
+            (LEAST(LOG(GREATEST(${posts.favoriteCount}, 1) + 1) / LOG(51), 1) * 15) +
+            (LEAST(${posts.photoCount}::DECIMAL / 10, 1) * 10) +
+            (LEAST(LOG(GREATEST(${posts.viewCount}, 1) + 1) / LOG(1001), 1) * 5)
         )::double precision`
           )
         )

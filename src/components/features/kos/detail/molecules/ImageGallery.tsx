@@ -9,36 +9,44 @@ export interface ImageGalleryProps {
 }
 
 export const ImageGallery: React.FC<ImageGalleryProps> = ({ images, activeIndex, onImageClick, kosName }) => (
-  <div className="px-8 pb-6 mb-20">
-    <div className="grid grid-cols-4 gap-3 h-64">
-      <div className="col-span-2 row-span-2">
+  <div className="px-8 pb-6">
+    <div className="grid grid-cols-4 gap-3" style={{ height: '320px' }}>
+      {/* Main image - 2 columns, full height */}
+      <div className="col-span-2 row-span-2 relative rounded-lg overflow-hidden bg-gray-200">
         <SafeImage
           src={images[activeIndex]}
           alt={kosName}
-            width={400}
-            height={256}
-            style={{ width: '100%', height: 'auto' }}
-            className="object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-            onClick={() => onImageClick(activeIndex)}
-            fallbackSrc="/images/rooms/room1.jpg"
+          width={600}
+          height={320}
+          className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          onClick={() => onImageClick(activeIndex)}
+          fallbackSrc="/images/rooms/room1.jpg"
         />
       </div>
-      {images.slice(1, 4).map((image: string, index: number) => (
-        <div key={index} className="relative h-32">
+      {/* Thumbnail images - each half height */}
+      {images.slice(1, 5).map((image: string, index: number) => (
+        <div 
+          key={index} 
+          className="relative rounded-lg overflow-hidden bg-gray-200"
+          style={{ height: 'calc(50% - 6px)' }}
+        >
           <SafeImage
             src={image}
             alt={`${kosName} - ${index + 2}`}
-            width={200}
-            height={128}
-            style={{ width: '100%', height: '100%' }}
-            className="object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+            width={300}
+            height={160}
+            className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             onClick={() => onImageClick(index + 1)}
             fallbackSrc={`/images/rooms/room${(index % 4) + 1}.jpg`}
           />
-          {index === 2 && images.length > 4 && (
-            <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-lg cursor-pointer hover:bg-opacity-60 transition-all"
-              onClick={() => onImageClick(index + 1)}>
-              <span className="text-white font-semibold text-xs">+{images.length - 4} foto</span>
+          {index === 3 && images.length > 5 && (
+            <div 
+              className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center cursor-pointer hover:bg-opacity-60 transition-all"
+              onClick={() => onImageClick(index + 1)}
+            >
+              <span className="text-white font-semibold text-lg">+{images.length - 5} foto</span>
             </div>
           )}
         </div>

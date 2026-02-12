@@ -158,11 +158,20 @@ export interface KosPhotosApiResponse {
   message?: string;
 }
 
+export interface SearchPagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+}
+
 export interface KosSearchApiResponse {
   success: boolean;
   data?: {
     results: PublicKosData[];
-    pagination?: { Pagination: PaginatedResponse<PublicKosData> };
+    pagination: SearchPagination;
   };
   message?: string;
 }

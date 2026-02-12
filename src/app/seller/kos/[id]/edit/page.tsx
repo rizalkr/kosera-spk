@@ -4,20 +4,10 @@ import ProtectedRoute from '@/components/layouts/ProtectedRoute';
 import Header from '@/components/layouts/Header';
 import { useEditKos } from '@/hooks/seller/kos/useEditKos';
 import { EditKosForm } from '@/components/features/seller/kos/edit/organisms/EditKosForm';
+import { KECAMATAN_SEMARANG, FACILITIES } from '@/lib/constants';
 
-// Cities & facilities static lists (could be moved to constants file later)
-const CITIES = [
-  'Jakarta', 'Surabaya', 'Bandung', 'Medan', 'Bekasi', 'Semarang',
-  'Makassar', 'Palembang', 'Tangerang', 'Bogor', 'Batam', 'Pekanbaru',
-  'Bandar Lampung', 'Yogyakarta', 'Malang', 'Solo', 'Denpasar', 'Balikpapan'
-];
-
-const FACILITIES = [
-  'WiFi', 'AC', 'Parkir', 'Kamar Mandi Dalam', 'Kamar Mandi Luar',
-  'Dapur Bersama', 'Ruang Tamu', 'Laundry', 'Security 24 Jam',
-  'CCTV', 'Kasur', 'Lemari', 'Meja Belajar', 'Kursi', 'TV',
-  'Kulkas', 'Dispenser', 'Jemuran', 'Taman', 'Musholla'
-];
+// Re-export for backward compatibility
+export const CITIES = ['Semua Kecamatan', ...KECAMATAN_SEMARANG];
 
 function EditKosPage() {
   const { kosId, formData, errors, isLoading, isSubmitting, handleChange, handleSubmit, handleCancel } = useEditKos();
@@ -89,8 +79,8 @@ function EditKosPage() {
               handleSubmit={handleSubmit}
               handleCancel={handleCancel}
               isSubmitting={isSubmitting}
-              cities={CITIES}
-              facilitiesOptions={FACILITIES}
+              cities={[...CITIES]}
+              facilitiesOptions={[...FACILITIES]}
             />
           </div>
 

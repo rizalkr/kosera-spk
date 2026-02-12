@@ -22,12 +22,19 @@ export async function GET(request: Request) {
 
     const offset = (page - 1) * limit;
 
+    // Quality score formula - normalized to 0-100 scale
+    // Components:
+    // - Rating: max 5, weight 50% -> contributes up to 50 points
+    // - Review count: log scale (cap at 100 reviews), weight 20% -> up to 20 points
+    // - Favorites: log scale (cap at 50), weight 15% -> up to 15 points
+    // - Photos: linear (cap at 10), weight 10% -> up to 10 points
+    // - Views: log scale (cap at 1000), weight 5% -> up to 5 points
     const qualityScoreFormula = sql<number>`(
-      (CAST(${posts.averageRating} AS DECIMAL) * 0.4) +
-      (${posts.reviewCount} * 0.2) +
-      (${posts.favoriteCount} * 0.2) +
-      (${posts.photoCount} * 0.1) +
-      (${posts.viewCount} * 0.1)
+      (CAST(${posts.averageRating} AS DECIMAL) / 5.0 * 50) +
+      (LEAST(LOG(GREATEST(${posts.reviewCount}, 1) + 1) / LOG(101), 1) * 20) +
+      (LEAST(LOG(GREATEST(${posts.favoriteCount}, 1) + 1) / LOG(51), 1) * 15) +
+      (LEAST(${posts.photoCount}::DECIMAL / 10, 1) * 10) +
+      (LEAST(LOG(GREATEST(${posts.viewCount}, 1) + 1) / LOG(1001), 1) * 5)
     )`.as('quality_score');
 
     const conditions: SQLWrapper[] = [];

@@ -53,6 +53,8 @@ export async function GET(
           comment: reviews.comment,
           createdAt: reviews.createdAt,
           updatedAt: reviews.updatedAt,
+          reviewerName: reviews.reviewerName,
+          reviewTimeText: reviews.reviewTimeText,
           user: { id: users.id, name: users.name, username: users.username },
         })
         .from(reviews)

@@ -14,7 +14,7 @@
     "db:push": "dotenv -e .env.local -- drizzle-kit push",
     "db:studio": "dotenv -e .env.local -- drizzle-kit studio",
     "db:seed": "dotenv -e .env.local -- tsx src/db/seed.ts",
-    "db:seed-usm": "dotenv -e .env.local -- tsx src/db/seed-usm.ts",
+    "db:seed-usm": "dotenv -e .env.local -- tsx src/db/seed-usm-complete.ts",
     "db:seed-photos": "dotenv -e .env.local -- tsx src/db/seed-photos.ts",
     "db:clear-photos": "dotenv -e .env.local -- tsx src/db/seed-photos.ts --clear",
     "db:drop": "dotenv -e .env.local -- drizzle-kit drop",

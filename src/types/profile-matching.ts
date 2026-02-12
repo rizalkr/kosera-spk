@@ -36,16 +36,26 @@ export const AVAILABLE_FACILITIES = [
 export type AvailableFacility = typeof AVAILABLE_FACILITIES[number];
 
 /**
- * Available cities in the system
+ * Available kecamatan/cities in the system (Semarang area)
+ * Now uses Kecamatan instead of city names for more granular filtering
  */
 export const AVAILABLE_CITIES = [
-  'Semarang',
-  'Jakarta',
-  'Yogyakarta',
-  'Bandung',
-  'Surabaya',
-  'Malang',
-  'Solo',
+  'Banyumanik',
+  'Candisari',
+  'Gajah Mungkur',
+  'Gayamsari',
+  'Genuk',
+  'Gunungpati',
+  'Mijen',
+  'Ngaliyan',
+  'Pedurungan',
+  'Semarang Barat',
+  'Semarang Selatan',
+  'Semarang Tengah',
+  'Semarang Timur',
+  'Semarang Utara',
+  'Tembalang',
+  'Tugu',
 ] as const;
 
 export type AvailableCity = typeof AVAILABLE_CITIES[number];

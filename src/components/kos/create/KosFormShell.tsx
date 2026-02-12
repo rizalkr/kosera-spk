@@ -7,24 +7,17 @@ import { SectionCoordinates } from './sections/SectionCoordinates';
 import { SubmitActions } from './sections/SubmitActions';
 import { TipsPanel } from './sections/TipsPanel';
 import { FormErrorAlert } from './FormErrorAlert';
+import { KECAMATAN_SEMARANG, FACILITIES } from '@/lib/constants';
 
 export type KosFormShellProps = Record<string, never>; // placeholder for future props without using empty interface
 
 export const KosFormShell: React.FC<KosFormShellProps> = () => {
   const { formData, errors, isSubmitting, handleInputChange, handleSubmit, addFacility } = useCreateKosForm();
 
-  const cities = [
-    'Jakarta', 'Surabaya', 'Bandung', 'Medan', 'Bekasi', 'Semarang',
-    'Makassar', 'Palembang', 'Tangerang', 'Bogor', 'Batam', 'Pekanbaru',
-    'Bandar Lampung', 'Yogyakarta', 'Malang', 'Solo', 'Denpasar', 'Balikpapan'
-  ];
+  // Use centralized constants for Kecamatan Semarang
+  const cities = [...KECAMATAN_SEMARANG];
 
-  const facilitiesOptions = [
-    'WiFi', 'AC', 'Parkir', 'Kamar Mandi Dalam', 'Kamar Mandi Luar',
-    'Dapur Bersama', 'Ruang Tamu', 'Laundry', 'Security 24 Jam',
-    'CCTV', 'Kasur', 'Lemari', 'Meja Belajar', 'Kursi', 'TV',
-    'Kulkas', 'Dispenser', 'Jemuran', 'Taman', 'Musholla'
-  ];
+  const facilitiesOptions = [...FACILITIES];
 
   return (
     <>

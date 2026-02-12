@@ -2,6 +2,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { SearchParams } from '@/types';
 import { useFiltersDebounce } from '@/hooks/useDebounce';
+import { KECAMATAN_SEMARANG, FACILITIES } from '@/lib/constants';
 
 interface FilterBarProps {
   onFilter?: (filters: SearchParams) => void;
@@ -43,27 +44,9 @@ export default function FilterBar({ onFilter, initialFilters = {} }: FilterBarPr
     onFilter?.(cleanFilters);
   }, [debouncedFilters, onFilter]);
 
-  const facilities = [
-    'Kamar mandi dalam',
-    'AC',
-    'WiFi',
-    'Parkir',
-    'Dapur',
-    'Laundry',
-    'Security 24 jam',
-    'CCTV'
-  ];
-
-  const cities = [
-    'Semarang',
-    'Jakarta',
-    'Surabaya',
-    'Bandung',
-    'Yogyakarta',
-    'Malang',
-    'Solo',
-    'Depok'
-  ];
+  // Use constants from centralized file
+  const facilities = [...FACILITIES.slice(0, 8)]; // Show first 8 facilities
+  const kecamatanList = [...KECAMATAN_SEMARANG];
 
   const handleFacilityToggle = (facility: string) => {
     setSelectedFacilities(prev => 
@@ -125,7 +108,7 @@ export default function FilterBar({ onFilter, initialFilters = {} }: FilterBarPr
           )}
         </div>
 
-        {/* City Select */}
+        {/* Kecamatan Select */}
         <div className="flex items-center border bg-white text-blue-300 rounded-lg px-3 py-2">
           <svg className="w-5 h-5 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -136,9 +119,9 @@ export default function FilterBar({ onFilter, initialFilters = {} }: FilterBarPr
             onChange={(e) => setCity(e.target.value)} 
             className="outline-none"
           >
-            <option value="">Semua Kota</option>
-            {cities.map(cityName => (
-              <option key={cityName} value={cityName}>{cityName}</option>
+            <option value="">Semua Kecamatan</option>
+            {kecamatanList.map((kecamatan) => (
+              <option key={kecamatan} value={kecamatan}>{kecamatan}</option>
             ))}
           </select>
         </div>
