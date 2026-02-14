@@ -135,7 +135,7 @@ export default function Header() {
               isActive("/list") ? "underline font-semibold" : ""
             }`}
           >
-            Daftar
+            List Kos
           </button>
           <div className="mt-2 relative inline-block" ref={servicesRef}>
             <button
