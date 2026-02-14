@@ -1,0 +1,46 @@
+/**
+ * AI Health Check API
+ * 
+ * Public endpoint to check if AI service is available
+ * Used by frontend to determine if semantic search can be used
+ * 
+ * @module app/api/ai/health
+ */
+
+import { NextResponse } from 'next/server';
+import { checkHealth, getIndexingStats } from '@/lib/ai';
+
+export const dynamic = 'force-dynamic';
+
+/**
+ * GET /api/ai/health
+ * 
+ * Check AI service health status
+ */
+export async function GET() {
+  try {
+    // Check AI service health
+    const health = await checkHealth();
+    const stats = await getIndexingStats();
+
+    return NextResponse.json({
+      status: 'online',
+      model: health.model,
+      dimension: health.dimension,
+      indexing: {
+        total: stats.total,
+        indexed: stats.indexed,
+        percentComplete: stats.total > 0 
+          ? Math.round((stats.indexed / stats.total) * 100) 
+          : 0,
+      },
+    });
+  } catch {
+    return NextResponse.json({
+      status: 'offline',
+      model: null,
+      dimension: null,
+      indexing: null,
+    });
+  }
+}
