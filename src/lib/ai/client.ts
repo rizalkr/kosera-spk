@@ -72,6 +72,47 @@ const getAIServiceUrl = (): string => {
 };
 
 /**
+ * Fetch with retry for handling HuggingFace Spaces cold start
+ * HF Spaces can take 30-60 seconds to wake up from sleep mode
+ */
+const fetchWithRetry = async (
+  url: string,
+  options: RequestInit,
+  maxRetries = 3,
+  initialDelay = 5000
+): Promise<Response> => {
+  let lastError: Error | null = null;
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const controller = new AbortController();
+      // Longer timeout for cold start (60 seconds)
+      const timeoutId = setTimeout(() => controller.abort(), 60000);
+      
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      return response;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      
+      // Don't retry on abort or if it's the last attempt
+      if (attempt === maxRetries - 1) break;
+      
+      // Exponential backoff
+      const delay = initialDelay * Math.pow(2, attempt);
+      console.log(`AI service request failed, retrying in ${delay}ms... (attempt ${attempt + 1}/${maxRetries})`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  
+  throw lastError || new Error('Failed after retries');
+};
+
+/**
  * Check if AI service is healthy and model is loaded
  *
  * @returns Health status with model info
@@ -115,7 +156,7 @@ export const vectorize = async (text: string): Promise<VectorizeResponse> => {
   const baseUrl = getAIServiceUrl();
 
   try {
-    const response = await fetch(`${baseUrl}/vectorize`, {
+    const response = await fetchWithRetry(`${baseUrl}/vectorize`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -177,7 +218,7 @@ export const vectorizeBatch = async (
   }
 
   try {
-    const response = await fetch(`${baseUrl}/vectorize/batch`, {
+    const response = await fetchWithRetry(`${baseUrl}/vectorize/batch`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
