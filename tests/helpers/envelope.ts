@@ -65,11 +65,21 @@ export function expectSuccess<T = unknown>(parsed: ParsedResponse): asserts pars
     console.error('[expectSuccess] Non-object body', {
       status: parsed.status,
       contentType: parsed.contentType,
-      rawPreview: parsed.raw.slice(0, 200),
+      rawPreview: parsed.raw.slice(0, 500),
     });
   }
   expect(typeof parsed.body).toBe('object');
   const body = parsed.body as Record<string, unknown>;
+  
+  // Log full response if not success for debugging CI failures
+  if (body.success !== true) {
+    console.error('[expectSuccess] API returned error:', {
+      status: parsed.status,
+      body: JSON.stringify(body, null, 2),
+      rawPreview: parsed.raw.slice(0, 500),
+    });
+  }
+  
   expect(body.success).toBe(true);
   expect(typeof body.message).toBe('string');
   expect(body).toHaveProperty('data');

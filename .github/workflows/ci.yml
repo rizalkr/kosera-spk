@@ -65,13 +65,21 @@ jobs:
 
       - name: Wait for server readiness
         run: |
-          for i in {1..40}; do
-            code=$(curl -o /dev/null -s -w "%{http_code}" http://localhost:3000/api/auth/verify || echo 000)
-            if [ "$code" != "000" ]; then
-              echo "Server responded with HTTP $code";
-              break;
+          echo "Waiting for Next.js server to be fully ready..."
+          sleep 10
+          for i in {1..60}; do
+            code=$(curl -o /dev/null -s -w "%{http_code}" http://localhost:3000/api/auth/verify 2>/dev/null || echo 000)
+            if [ "$code" = "200" ] || [ "$code" = "401" ]; then
+              echo "Server responded with HTTP $code"
+              # Warmup: hit a few endpoints to ensure everything is loaded
+              echo "Running warmup requests..."
+              curl -s http://localhost:3000/api/kos > /dev/null 2>&1 || true
+              sleep 5
+              echo "Server is ready!"
+              break
             fi
-            sleep 2;
+            echo "Attempt $i: Server not ready (HTTP $code), waiting..."
+            sleep 3
           done
 
       - name: Lint
@@ -85,6 +93,10 @@ jobs:
 
       - name: Integration Tests
         run: npm run test:integration
+        env:
+          TEST_BASE_URL: http://localhost:3000
+          INTEGRATION_PERSIST: '1'
+          NODE_ENV: test
 
       - name: Stop server
         if: always()
