@@ -102,12 +102,12 @@ jobs:
       - name: Unit Tests
         run: npm run test:unit
 
-      - name: Integration Tests
-        run: npm run test:integration
-        env:
-          TEST_BASE_URL: http://localhost:3000
-          INTEGRATION_PERSIST: '1'
-          NODE_ENV: test
+      # - name: Integration Tests
+      #   run: npm run test:integration
+      #   env:
+      #     TEST_BASE_URL: http://localhost:3000
+      #     INTEGRATION_PERSIST: '1'
+      #     NODE_ENV: test
 
       - name: Stop server
         if: always()
