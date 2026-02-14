@@ -58,6 +58,10 @@ jobs:
       - name: Apply schema (Drizzle push)
         run: npm run db:push:test
 
+      - name: Debug - List kos table columns
+        run: |
+          psql "postgresql://kosera:kosera123@localhost:5433/kosera_test" -c "SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_name = 'kos' ORDER BY ordinal_position;"
+
       - name: List migrated tables (debug)
         run: |
           psql "postgresql://kosera:kosera123@localhost:5433/kosera_test" -c "SELECT tablename FROM pg_tables WHERE schemaname='public';"
