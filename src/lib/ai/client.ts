@@ -15,11 +15,26 @@ interface VectorizeResponse {
   model: string;
 }
 
+/** Raw response from AI service vectorize endpoint */
+interface AIVectorizeResponse {
+  vector: number[];
+  dimension: number;
+  status: string;
+}
+
 /** Response from batch vectorize endpoint */
 interface BatchVectorizeResponse {
   results: VectorizeResponse[];
   total: number;
   model: string;
+}
+
+/** Raw response from AI service batch vectorize endpoint */
+interface AIBatchVectorizeResponse {
+  vectors: number[][];
+  count: number;
+  dimension: number;
+  status: string;
 }
 
 /** Health check response */
@@ -118,7 +133,14 @@ export const vectorize = async (text: string): Promise<VectorizeResponse> => {
       );
     }
 
-    return await response.json();
+    // Map AI service response to expected format
+    const aiResponse = (await response.json()) as AIVectorizeResponse;
+    return {
+      text,
+      embedding: aiResponse.vector,
+      dimension: aiResponse.dimension,
+      model: 'paraphrase-multilingual-MiniLM-L12-v2',
+    };
   } catch (error) {
     if (error instanceof AIServiceError) throw error;
     throw new AIServiceError(
@@ -173,7 +195,18 @@ export const vectorizeBatch = async (
       );
     }
 
-    return await response.json();
+    // Map AI service response to expected format
+    const aiResponse = (await response.json()) as AIBatchVectorizeResponse;
+    return {
+      results: texts.map((text, i) => ({
+        text,
+        embedding: aiResponse.vectors[i],
+        dimension: aiResponse.dimension,
+        model: 'paraphrase-multilingual-MiniLM-L12-v2',
+      })),
+      total: aiResponse.count,
+      model: 'paraphrase-multilingual-MiniLM-L12-v2',
+    };
   } catch (error) {
     if (error instanceof AIServiceError) throw error;
     throw new AIServiceError(
