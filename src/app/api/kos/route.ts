@@ -116,6 +116,13 @@ export const POST = withSellerOrAdmin(async (request: AuthenticatedRequest) => {
         facilities: facilitiesValue,
         totalRooms,
         occupiedRooms: occupiedRooms ?? 0,
+        // Explicitly set nullable fields to null to avoid 'default' issue with vector type
+        latitude: null,
+        longitude: null,
+        descriptionFull: null,
+        embedding: null,
+        deletedAt: null,
+        deletedBy: null,
       })
       .returning();
 
