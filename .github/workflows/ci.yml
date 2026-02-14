@@ -39,6 +39,11 @@ jobs:
           done
           docker exec kosera-db-test pg_isready -U kosera -d kosera_test
 
+      - name: Enable pgvector extension
+        run: |
+          docker exec kosera-db-test psql -U kosera -d kosera_test -c "CREATE EXTENSION IF NOT EXISTS vector;"
+          echo "pgvector extension enabled"
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
