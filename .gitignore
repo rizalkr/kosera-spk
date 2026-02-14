@@ -34,7 +34,6 @@ yarn-error.log*
 .env*
 !.env.docker
 !.env.example
-.env.test
 
 # Docker
 .docker-data/
