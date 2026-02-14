@@ -2,14 +2,20 @@ import { pgTable, serial, text, integer, timestamp, pgEnum, boolean, decimal, do
 
 // Custom type for pgvector - stores embeddings as float arrays
 // Dimension 384 matches the output of all-MiniLM-L6-v2 model
-export const vector = customType<{ data: number[]; driverData: string }>({
+export const vector = customType<{ data: number[] | null; driverData: string | null }>({
   dataType() {
     return 'vector(384)';
   },
-  toDriver(value: number[]): string {
+  toDriver(value: number[] | null): string | null {
+    if (value === null || value === undefined) {
+      return null;
+    }
     return `[${value.join(',')}]`;
   },
-  fromDriver(value: string): number[] {
+  fromDriver(value: string | null): number[] | null {
+    if (value === null || value === undefined) {
+      return null;
+    }
     // Parse PostgreSQL vector format: [0.1,0.2,0.3,...]
     const cleaned = value.replace(/[\[\]]/g, '');
     return cleaned.split(',').map(Number);
