@@ -6,9 +6,6 @@ import { useEditKos } from '@/hooks/seller/kos/useEditKos';
 import { EditKosForm } from '@/components/features/seller/kos/edit/organisms/EditKosForm';
 import { KECAMATAN_SEMARANG, FACILITIES } from '@/lib/constants';
 
-// Re-export for backward compatibility
-export const CITIES = ['Semua Kecamatan', ...KECAMATAN_SEMARANG];
-
 function EditKosPage() {
   const { kosId, formData, errors, isLoading, isSubmitting, handleChange, handleSubmit, handleCancel } = useEditKos();
 
@@ -79,7 +76,7 @@ function EditKosPage() {
               handleSubmit={handleSubmit}
               handleCancel={handleCancel}
               isSubmitting={isSubmitting}
-              cities={[...CITIES]}
+              cities={['Semua Kecamatan', ...KECAMATAN_SEMARANG]}
               facilitiesOptions={[...FACILITIES]}
             />
           </div>
