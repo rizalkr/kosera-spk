@@ -139,7 +139,14 @@ export const POST = withSellerOrAdmin(async (request: AuthenticatedRequest) => {
       },
     });
   } catch (error) {
-    console.error('kos.create.POST error', error);
-    return fail('internal_error', 'Failed to create kos', undefined, { status: 500 });
+    // Enhanced error logging for CI debugging
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    console.error('kos.create.POST error:', {
+      message: errorMessage,
+      stack: errorStack,
+      error,
+    });
+    return fail('internal_error', 'Failed to create kos', { debug: errorMessage }, { status: 500 });
   }
 });

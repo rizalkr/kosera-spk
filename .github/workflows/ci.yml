@@ -31,7 +31,7 @@ jobs:
 
       - name: Start test database (compose)
         run: |
-          docker compose up -d db_test
+          docker compose --profile test up -d db_test
           echo "Waiting for Postgres to be ready..."
           for i in {1..30}; do
             docker exec kosera-db-test pg_isready -U kosera -d kosera_test && break
@@ -43,6 +43,8 @@ jobs:
         run: |
           docker exec kosera-db-test psql -U kosera -d kosera_test -c "CREATE EXTENSION IF NOT EXISTS vector;"
           echo "pgvector extension enabled"
+          # Verify extension is installed
+          docker exec kosera-db-test psql -U kosera -d kosera_test -c "SELECT extname FROM pg_extension WHERE extname = 'vector';"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
