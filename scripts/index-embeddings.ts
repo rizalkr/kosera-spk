@@ -4,6 +4,9 @@
  * Or inside container: docker exec -it kosera-app npx tsx scripts/index-embeddings.ts
  */
 
+// Load environment variables
+import 'dotenv/config';
+
 import { indexBatch, getIndexingStats, checkHealth } from '../src/lib/ai';
 
 async function main() {

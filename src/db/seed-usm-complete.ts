@@ -16,6 +16,9 @@
  *   npx tsx src/db/seed-usm-complete.ts
  */
 
+// Load environment variables
+import 'dotenv/config';
+
 import { db, users, posts, kos, reviews, kosPhotos, favorites, bookings } from './index';
 import { hashPassword } from '@/lib/auth';
 import { like } from 'drizzle-orm';
