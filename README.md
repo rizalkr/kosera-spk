@@ -18,7 +18,7 @@ The system is designed with a strict separation of concerns, dividing business l
 ### Intelligent Hybrid Recommendation
 To resolve the limitations of traditional search, the system implements a dual-algorithm approach:
 * **Content-Based Filtering (CBF):** Calculates precise matching scores using the Profile Matching algorithm. It evaluates explicit user constraints such as budget limits, facility requirements, and specific room parameters against actual property data.
-* **Semantic Search & Item-Based Collaborative Filtering (IBCF):** Utilizes multi-dimensional vector space (AI embeddings). By leveraging `pgvector`, the system analyzes the contextual and spatial proximity between properties, enabling fuzzy matching and semantic discovery that strict keyword searches cannot achieve.
+* **Semantic Search:** Utilizes multi-dimensional vector space (AI embeddings). By leveraging `pgvector`, the system analyzes the contextual and spatial proximity between properties, enabling fuzzy matching and semantic discovery that strict keyword searches cannot achieve.
 
 ---
 
