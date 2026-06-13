@@ -39,14 +39,25 @@ The repository is built on a modern, type-safe, and highly scalable stack:
 
 To maintain a concise main README, detailed technical documentation has been modularized. Please review the following links for specific implementations:
 
-- **[Hybrid Recommendation & Algorithms](./docs/implementation/profile-matching-spk.md)**
-  *Mathematical comparison of Content-Based Filtering (Profile Matching) vs Semantic Search (pgvector embeddings).*
-- **[Database Design & Vector Search](./docs/api/database-design.md)**
+### Core Logic & API
+- **[Hybrid Recommendation & Algorithms](./blob/docs/implementation/profile-matching-spk.md)**
+  *Mathematical comparison of Content-Based Filtering vs Semantic Search.*
+- **[Database Design & Vector Search](./blob/docs/api/database-design.md)**
   *Drizzle ORM relational schema mapping and spatial vector index configurations.*
-- **[API Design & Response Standardization](./docs/api/response-standard.md)**
-  *Implementation of the Envelope pattern to ensure consistent request/response payloads across all endpoints.*
-- **[Testing Strategy & CI/CD](./docs/testing/TESTING_SUMMARY.md)**
-  *Database state isolation using the Factory pattern and automated CI/CD deployment workflows.*
+- **[API Design & Response Standardization](./blob/docs/api/response-standard.md)**
+  *Implementation of the Envelope pattern to ensure consistent payloads.*
+
+### Infrastructure & Deployment
+- **[Dual Environment Setup Guide](./DUAL_ENVIRONMENT_SETUP.md)**
+  *Directives for running the system via Docker containers or local host processes.*
+- **[Deployment Architecture Guide](./blob/docs/deployment/vercel-huggingface-guide.md)**
+  *Production deployment configurations for Vercel and HuggingFace Spaces.*
+- **[Cloudinary Integration](./blob/docs/cloudinary/cloudinary-integration.md)**
+  *Asset management and optimization workflows.*
+
+### Quality Assurance
+- **[Testing Strategy & CI/CD](./blob/docs/testing/TESTING_SUMMARY.md)**
+  *Database state isolation using the Factory pattern and automated CI/CD workflows.*
 
 ---
 
@@ -60,18 +71,22 @@ Clone the repository and configure the environment variables based on the provid
 git clone <repository-url>
 cd kosera-spk
 cp .env.docker .env
-
 ```
+*(Note: You must configure the `DATABASE_URL` and `CLOUDINARY_URL` credentials in the `.env` file before proceeding)*
+
 ### 2. Build & Deploy Containers
 Execute Docker orchestration to isolate the development environment.
 ```bash
 docker compose up -d --build
-
 ```
+
 ### 3. Schema Migration & Vector Seeding
-Once the database container is operational, run the Drizzle schema migration and inject the initial seed data (including embeddings for semantic search).
+Once the database container is operational, run the Drizzle schema migration and inject the initial seed data.
 ```bash
 npm run db:push
 npm run db:seed
 # Optional: To generate vector representations for the complete dataset
-npx tsx scripts/index-embeddings.ts
+npx tsx scripts/index-embeddings.ts 
+```
+
+For detailed instructions on running without Docker or executing test suites, refer to the **[Dual Environment Setup Guide](./DUAL_ENVIRONMENT_SETUP.md)**.
