@@ -1,197 +1,133 @@
 # Dual Environment Setup Guide
 
 ## Overview
-Proyek Kosera dapat berjalan di **2 lingkungan**:
-1. **Local Development** - menggunakan PostgreSQL lokal
-2. **Docker Environment** - menggunakan Docker containers
+The Kosera project is architected to operate across two distinct runtime environments:
+1. Local Development - Utilizing a host-level PostgreSQL service.
+2. Docker Environment - Utilizing isolated Docker containers for full stack execution.
 
-## Environment Files
+## Environment Configurations
 
-### 1. Local Development: `.env.local`
+### 1. Local Development: `.env` or `.env.local`
 ```bash
-# Database menggunakan localhost
+# Host-level database connection
 DATABASE_URL=postgresql://kosera:kosera123@localhost:5432/kosera
 NEXT_PUBLIC_API_URL=http://localhost:3000
 NODE_ENV=development
 ```
 
-### 2. Docker Environment: `.env`
+### 2. Docker Environment: `.env.docker`
 ```bash
-# Database menggunakan Docker hostname 'db'
+# Container-level database connection (resolving to 'db' hostname)
 DATABASE_URL=postgresql://kosera:kosera123@db:5432/kosera
 NEXT_PUBLIC_API_URL=http://localhost:3000
 NODE_ENV=development
 ```
 
-## Commands
+## Command Line Interface (CLI) Directives
 
 ### Local Development Commands
-Gunakan commands ini ketika bekerja di **local environment** (PostgreSQL sudah terinstall di sistem):
+Execute these commands when operating on the host machine with a native PostgreSQL installation:
 
 ```bash
-# Database operations
-npm run db:generate     # Generate migration files
-npm run db:migrate      # Apply migrations ke local DB
-npm run db:push         # Push schema langsung ke local DB
-npm run db:studio       # Buka Drizzle Studio untuk local DB
-npm run db:seed         # Seed data ke local DB
-npm run db:seed-photos  # Seed photos ke local DB
+# Database Operations
+npm run db:generate      # Generate Drizzle migration payloads
+npm run db:migrate       # Apply migrations to local DB
+npm run db:push          # Force schema synchronization to local DB
+npm run db:studio        # Initialize Drizzle Studio interface
+npm run db:seed          # Inject standard baseline data
+npm run db:seed-photos   # Inject mock media assets
 
-# Development
-npm run dev             # Start Next.js dev server
+# Application Runtime
+npm run dev              # Initialize Next.js development server
 
-# Testing
-npm run test            # Run tests locally
-npm run test:unit       # Run unit tests
-npm run test:integration # Run integration tests
+# Quality Assurance
+npm run test             # Execute complete test suite
+npm run test:unit        # Execute isolated unit tests
+npm run test:integration # Execute integration tests requiring local DB
 ```
 
 ### Docker Environment Commands
-Gunakan commands ini ketika bekerja di **Docker environment**:
+Execute these commands when utilizing containerized orchestration:
 
 ```bash
-# Database operations
-npm run docker:db:generate     # Generate migration files di container
-npm run docker:db:migrate      # Apply migrations ke Docker DB
-npm run docker:db:push         # Push schema ke Docker DB
-npm run docker:db:studio       # Buka Drizzle Studio untuk Docker DB
-npm run docker:db:seed         # Seed data ke Docker DB
-npm run docker:db:seed-photos  # Seed photos ke Docker DB
+# Database Operations (executed inside the container)
+npm run docker:db:generate     # Generate migration payloads within container
+npm run docker:db:migrate      # Apply migrations to containerized DB
+npm run docker:db:push         # Force schema synchronization to containerized DB
+npm run docker:db:studio       # Initialize Drizzle Studio for containerized DB
+npm run docker:db:seed         # Inject baseline data into containerized DB
+npm run docker:db:seed-photos  # Inject media assets into containerized DB
 
-# Development
-npm run docker:dev          # Start dengan Docker Compose
-npm run docker:dev:detach   # Start Docker Compose di background
-npm run docker:dev:down     # Stop Docker containers
-npm run docker:dev:clean    # Stop dan remove volumes
+# Container Orchestration
+npm run docker:dev          # Build and attach containers
+npm run docker:dev:detach   # Build and detach containers (daemon mode)
+npm run docker:dev:down     # Terminate all containers
+npm run docker:dev:clean    # Terminate containers and purge volume persistence
 
-# Testing
-npm run docker:test            # Run tests di container
-npm run docker:test:unit       # Run unit tests di container
-npm run docker:test:integration # Run integration tests di container
+# Quality Assurance (executed inside the container)
+npm run docker:test            # Execute complete test suite inside container
+npm run docker:test:unit       # Execute unit tests inside container
+npm run docker:test:integration # Execute integration tests inside container
 ```
 
-## Setup Instructions
+## Setup Protocol
 
-### Setup Local Development
+### Local Development Setup
 
-1. **Install PostgreSQL lokal**:
-   ```bash
-   # Ubuntu/Debian
-   sudo apt install postgresql postgresql-contrib
-   
-   # macOS dengan Homebrew
-   brew install postgresql
-   ```
-
-2. **Create database dan user**:
+1. Install PostgreSQL on the host machine.
+2. Initialize database and role privileges:
    ```sql
    sudo -u postgres psql
    CREATE USER kosera WITH PASSWORD 'kosera123';
    CREATE DATABASE kosera OWNER kosera;
    GRANT ALL PRIVILEGES ON DATABASE kosera TO kosera;
    ```
+3. Resolve dependencies: `npm install`
+4. Apply relational schema: `npm run db:migrate`
+5. Optional data injection: `npm run db:seed`
+6. Initialize runtime: `npm run dev`
 
-3. **Install dependencies**:
-   ```bash
-   npm install
-   ```
+### Docker Environment Setup
 
-4. **Run migrations**:
-   ```bash
-   npm run db:migrate
-   ```
+1. Ensure Docker Engine and Docker Compose are active on the host daemon.
+2. Duplicate `.env.docker` parameters to standard `.env` if required by docker-compose context.
+3. Initialize orchestration: `npm run docker:dev`
+   *(Note: Container initialization automatically applies Drizzle migrations)*
 
-5. **Seed data** (opsional):
-   ```bash
-   npm run db:seed
-   npm run db:seed-photos
-   ```
+## System Mechanics
 
-6. **Start development**:
-   ```bash
-   npm run dev
-   ```
+### Deterministic Environment Detection
+The `drizzle.config.ts` file implements a fallback detection algorithm:
+1. Primary resolution: `.env.local` (Local configuration)
+2. Fallback resolution: `.env.docker` or standard `.env` (Container configuration)
 
-### Setup Docker Environment
+## Troubleshooting Protocol
 
-1. **Pastikan Docker dan Docker Compose terinstall**
+* **Error: "getaddrinfo EAI_AGAIN db"**
+  * Cause: Attempting to execute a local command (`npm run db:*`) while the loaded configuration points to a Docker hostname.
+  * Resolution: Ensure parity between the environment file and the executed command prefix.
+* **Error: "Connection refused localhost:5432"**
+  * Cause: Host PostgreSQL daemon is inactive or not installed.
+  * Resolution: Start the local service (`systemctl start postgresql`) or switch to the Docker environment.
 
-2. **Start dengan Docker**:
-   ```bash
-   npm run docker:dev
-   ```
+## Infrastructure Validation
 
-3. **Migrations sudah otomatis dijalankan di container**
-
-4. **Seed data** (opsional):
-   ```bash
-   npm run docker:db:seed
-   npm run docker:db:seed-photos
-   ```
-
-## How It Works
-
-### Smart Environment Detection
-File `drizzle.config.ts` secara otomatis mendeteksi environment:
-1. Prioritas pertama: load `.env.local` (untuk local development)
-2. Jika `.env.local` tidak ada/tidak lengkap: load `.env` (untuk Docker)
-
-### Database Connections
-- **Local**: `postgresql://kosera:kosera123@localhost:5432/kosera`
-- **Docker**: `postgresql://kosera:kosera123@db:5432/kosera`
-
-### Commands Structure
-- `db:*` - untuk local development
-- `docker:db:*` - untuk Docker environment
-- `docker:*` - untuk Docker operations
-
-## Troubleshooting
-
-### Error: "getaddrinfo EAI_AGAIN db"
-- Anda mencoba menjalankan command local (`npm run db:*`) tetapi config mengarah ke Docker
-- **Solution**: Pastikan menggunakan command yang tepat untuk environment Anda
-
-### Error: "Connection refused localhost:5432"
-- PostgreSQL lokal tidak berjalan atau belum diinstall
-- **Solution**: Install dan start PostgreSQL lokal, atau gunakan Docker environment
-
-### Error: "database does not exist"
-- Database belum dibuat
-- **Solution**: Buat database sesuai instruksi setup
-
-## Testing Both Environments
-
-### Test Local Environment
+### Local Validation
 ```bash
-# 1. Check if local PostgreSQL is running
-sudo systemctl status postgresql  # Linux
-brew services list | grep postgres  # macOS
-
-# 2. Test database connection
+# Validate schema synchronization status
 npm run db:generate
-
-# 3. Expected output: "No schema changes, nothing to migrate 😴"
+# Expected standard output: "No schema changes, nothing to migrate"
 ```
 
-### Test Docker Environment
+### Docker Validation
 ```bash
-# 1. Start Docker environment
+# Deploy background daemon
 npm run docker:dev:detach
 
-# 2. Wait for containers to be ready (check logs)
+# Validate container runtime logs
 docker logs kosera-app
 docker logs kosera-db
 
-# 3. Test database operations
-npm run docker:db:generate
-
-# 4. Clean up
+# Terminate infrastructure
 npm run docker:dev:down
 ```
-
-## Current Status ✅
-- ✅ Dual environment setup completed
-- ✅ Smart environment detection implemented
-- ✅ Database migrations working in both environments
-- ✅ All commands properly configured
-- ✅ Ready for development in both local and Docker environments

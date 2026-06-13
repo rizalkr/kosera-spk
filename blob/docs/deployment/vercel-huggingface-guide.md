@@ -1,120 +1,101 @@
-# Deployment Guide: Vercel + HuggingFace Spaces
+# Deployment Guide: Vercel & HuggingFace Spaces
 
-## Arsitektur
+## System Architecture
 
+```text
++---------------------+         +----------------------+
+|       VERCEL        |         |  HUGGINGFACE SPACES  |
+|    (Next.js App)    |<------->|     (AI Service)     |
+|                     |  HTTPS  |                      |
+| - Frontend Logic    |         | - FastAPI Server     |
+| - API Routing       |         | - Sentence Trans.    |
+| - Profile Matching  |         | - Text Embeddings    |
++---------------------+         +----------------------+
+          |                                |
+          |                                |
+          v                                |
++---------------------+                    |
+|     PostgreSQL      |<-------------------+
+|   (Supabase/Neon)   |    (Indirect execution via
+|    + pgvector       |     Vercel API endpoints)
++---------------------+
 ```
-┌─────────────────────┐         ┌─────────────────────┐
-│      VERCEL         │         │  HUGGINGFACE SPACES │
-│   (Next.js App)     │◄───────►│   (AI Service)      │
-│                     │  HTTPS  │                     │
-│ - Frontend          │         │ - FastAPI           │
-│ - API Routes        │         │ - Sentence Trans.   │
-│ - Profile Matching  │         │ - Text Embedding    │
-└─────────────────────┘         └─────────────────────┘
-         │                               │
-         │                               │
-         ▼                               │
-┌─────────────────────┐                  │
-│   PostgreSQL        │◄─────────────────┘
-│  (Supabase/Neon)    │    (Tidak langsung,
-│  + pgvector         │     via Vercel API)
-└─────────────────────┘
-```
 
----
+## 1. AI Service Deployment (HuggingFace Spaces)
 
-## 1. Deploy AI Service ke HuggingFace Spaces
-
-### Langkah 1: Buat Repository di HuggingFace
-
-1. Buka https://huggingface.co/spaces
-2. Klik "Create new Space"
-3. Settings:
+### Step 1: Repository Initialization
+1. Navigate to https://huggingface.co/spaces
+2. Select "Create new Space"
+3. Configuration parameters:
    - **Space name**: `kosera-ai-service`
    - **SDK**: Docker
-   - **Hardware**: CPU Basic (gratis) atau GPU jika perlu
-   - **Visibility**: Public (gratis) atau Private
+   - **Hardware**: CPU Basic (Free tier) or GPU instance
+   - **Visibility**: Public or Private
 
-### Langkah 2: Upload AI Service
-
+### Step 2: Codebase Injection
 ```bash
-# Clone HuggingFace repo
-git clone https://huggingface.co/spaces/YOUR_USERNAME/kosera-ai-service
+# Clone the target HuggingFace repository
+git clone [https://huggingface.co/spaces/YOUR_USERNAME/kosera-ai-service](https://huggingface.co/spaces/YOUR_USERNAME/kosera-ai-service)
 cd kosera-ai-service
 
-# Copy ai-service files
+# Transfer AI service modules
 cp -r /path/to/kosera-spk/ai-service/* .
 
-# Pastikan README.md punya metadata HF
+# Verify HuggingFace YAML metadata in README.md
 cat README.md
-# Harus ada:
+# Required metadata structure:
 # ---
 # title: Kosera AI Service
 # sdk: docker
 # app_port: 7860
 # ---
 
-# Push ke HuggingFace
+# Execute push to remote
 git add .
-git commit -m "Initial deploy"
+git commit -m "Initial AI service deployment"
 git push
 ```
 
-### Langkah 3: Verifikasi
+### Step 3: Deployment Verification
+- Await build completion (Initial layer caching and model download ~500MB may take up to 10 minutes).
+- Health check execution: `https://YOUR_USERNAME-kosera-ai-service.hf.space/health`
 
-- Tunggu build selesai (~5-10 menit pertama kali, download model ~500MB)
-- Akses: `https://YOUR_USERNAME-kosera-ai-service.hf.space`
-- Test health: `https://YOUR_USERNAME-kosera-ai-service.hf.space/health`
+## 2. Next.js Deployment (Vercel)
 
----
-
-## 2. Deploy Next.js ke Vercel
-
-### Langkah 1: Environment Variables
-
-Di Vercel Dashboard, set environment variables:
+### Step 1: Environment Variables Configuration
+Inject the following variables into the Vercel Dashboard project settings:
 
 ```env
-# Database (Supabase/Neon with pgvector)
+# Relational Database Connection (Requires pgvector extension)
 DATABASE_URL=postgresql://user:pass@host:5432/db?sslmode=require
 
-# JWT Secret
-JWT_SECRET=your-super-secret-jwt-key
+# Cryptographic Secret
+JWT_SECRET=your-secure-jwt-key
 
-# AI Service URL (HuggingFace Spaces)
+# Remote AI Microservice Endpoint
 AI_SERVICE_URL=https://YOUR_USERNAME-kosera-ai-service.hf.space
 
-# Cloudinary (jika digunakan)
-NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=your-cloud
+# Media Orchestration (Cloudinary)
+NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=your-cloud-id
 CLOUDINARY_API_KEY=xxx
 CLOUDINARY_API_SECRET=xxx
 ```
 
-### Langkah 2: Deploy
-
+### Step 2: Vercel Deployment Execution
 ```bash
-# Install Vercel CLI
+# Install Vercel CLI pipeline
 npm i -g vercel
 
-# Deploy
+# Execute deployment payload
 cd /path/to/kosera-spk
 vercel
-
-# Atau connect repo di Vercel Dashboard
 ```
 
-### Langkah 3: Verifikasi
+## 3. Cross-Origin Resource Sharing (CORS) Protocol
 
-- Akses app di `https://your-app.vercel.app`
-- Test AI health: `https://your-app.vercel.app/api/ai/health`
+Strict CORS policies must be enforced. The AI Service must whitelist the Vercel domain to accept incoming requests.
 
----
-
-## 3. Konfigurasi CORS (Penting!)
-
-AI Service perlu allow requests dari Vercel domain.
-
-File `ai-service/main.py` sudah dikonfigurasi, tapi pastikan:
+Verify the configuration in `ai-service/main.py`:
 
 ```python
 app.add_middleware(
@@ -122,7 +103,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "https://*.vercel.app",
-        "https://your-domain.com",  # Domain custom jika ada
+        "[https://your-production-domain.com](https://your-production-domain.com)",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -130,91 +111,51 @@ app.add_middleware(
 )
 ```
 
----
+## 4. Vector Database Provisioning (pgvector)
 
-## 4. Database dengan pgvector
-
-### Opsi A: Supabase (Recommended)
-
-1. Buat project di https://supabase.com
-2. Enable pgvector extension:
+### Option A: Supabase (Recommended for direct pgvector support)
+1. Initialize a Supabase instance.
+2. Execute SQL constraint to enable vector operations:
    ```sql
    CREATE EXTENSION IF NOT EXISTS vector;
    ```
-3. Run migrations dari `drizzle/` folder
-4. Copy connection string ke `DATABASE_URL`
+3. Execute Drizzle migrations.
+4. Export the standard connection string to `DATABASE_URL`.
 
-### Opsi B: Neon
+### Option B: Neon
+1. Initialize a Neon instance (pgvector is typically enabled by default).
+2. Execute migrations.
+3. Export the pooled connection string.
 
-1. Buat project di https://neon.tech
-2. Enable pgvector (sudah default)
-3. Run migrations
-4. Copy connection string
+## 5. End-to-End Integration Testing
 
----
-
-## 5. Testing End-to-End
-
-### Test AI Service langsung:
-
+### Direct AI Service Validation
 ```bash
-# Health check
-curl https://YOUR_USERNAME-kosera-ai-service.hf.space/health
-
-# Test vectorize
+# Validate vectorization payload
 curl -X POST https://YOUR_USERNAME-kosera-ai-service.hf.space/vectorize \
   -H "Content-Type: application/json" \
   -d '{"text": "kos murah dekat kampus"}'
 ```
 
-### Test via Vercel App:
-
+### Vercel API Gateway Validation
 ```bash
-# AI health via Next.js
-curl https://your-app.vercel.app/api/ai/health
-
-# Semantic search
-curl -X POST https://your-app.vercel.app/api/kos/semantic-search \
+# Validate semantic search pipeline
+curl -X POST [https://your-app.vercel.app/api/kos/semantic-search](https://your-app.vercel.app/api/kos/semantic-search) \
   -H "Content-Type: application/json" \
   -d '{"query": "kos nyaman dengan wifi cepat", "limit": 5}'
 ```
 
----
+## 6. System Troubleshooting
 
-## 6. Troubleshooting
+### HuggingFace Container Fails to Start
+- Inspect container logs in the HuggingFace dashboard.
+- Verify `app_port: 7860` is explicitly declared in `README.md`.
+- Verify the Dockerfile executes under a non-root user constraint.
 
-### HuggingFace Space tidak start
+### 504 Gateway Timeout on Vercel
+- Cause: HuggingFace free instances spin down after inactivity. Cold starts take 30-60 seconds, exceeding Vercel's default serverless timeout.
+- Resolution: Implement a keep-alive CRON job or upgrade the HuggingFace instance to a persistent state.
 
-- Cek logs di HuggingFace Dashboard
-- Pastikan `app_port: 7860` di README.md
-- Pastikan Dockerfile pakai USER non-root
-
-### AI Service timeout di Vercel
-
-- HuggingFace Spaces gratis bisa sleep setelah idle
-- Cold start bisa 30-60 detik
-- Solusi: Upgrade ke HF Pro atau buat cron job untuk keep-alive
-
-### CORS error
-
-- Pastikan domain Vercel ada di `allow_origins`
-- Check browser console untuk detail error
-
-### Embedding tidak tersimpan
-
-- Pastikan pgvector extension enabled
-- Run: `CREATE EXTENSION IF NOT EXISTS vector;`
-- Cek kolom `embedding` di tabel `kos`
-
----
-
-## 7. Biaya
-
-| Service | Free Tier | Paid |
-|---------|-----------|------|
-| Vercel | 100GB bandwidth/bulan | $20/bulan |
-| HuggingFace Spaces | CPU Basic | $9/bulan (GPU) |
-| Supabase | 500MB database | $25/bulan |
-| Neon | 512MB database | $19/bulan |
-
-**Estimasi production minimal: $0 - $25/bulan**
+### Vector Embedding Fails to Persist
+- Cause: Missing database extension.
+- Resolution: Manually execute `CREATE EXTENSION IF NOT EXISTS vector;` in the SQL console before applying Drizzle migrations.
