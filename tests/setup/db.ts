@@ -1,6 +1,16 @@
 /** Test DB helpers: migration + cleanup */
 import { db } from '../../src/db';
-import { kos, users, posts, reviews, favorites, kosPhotos, bookings } from '../../src/db';
+import {
+  kos,
+  users,
+  posts,
+  reviews,
+  favorites,
+  kosPhotos,
+  bookings,
+  bookingStatusHistory,
+  userPreferences,
+} from '../../src/db';
 import { sql } from 'drizzle-orm';
 
 function assertTestDatabase() {
@@ -21,7 +31,9 @@ export async function resetDatabase(): Promise<void> {
   assertTestDatabase();
   // Attempt truncate; if tables not yet migrated, skip gracefully so migrations can run in setup.
   try {
-    await db.execute(sql`TRUNCATE TABLE ${bookings}, ${kosPhotos}, ${favorites}, ${reviews}, ${kos}, ${posts}, ${users} RESTART IDENTITY CASCADE`);
+    await db.execute(
+      sql`TRUNCATE TABLE ${bookingStatusHistory}, ${userPreferences}, ${bookings}, ${kosPhotos}, ${favorites}, ${reviews}, ${kos}, ${posts}, ${users} RESTART IDENTITY CASCADE`
+    );
   } catch (err: unknown) {
     const message = (err as Error)?.message || '';
     if (/does not exist/i.test(message)) {

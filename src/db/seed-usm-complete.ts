@@ -16,8 +16,8 @@
  *   npx tsx src/db/seed-usm-complete.ts
  */
 
-// Load environment variables
-import 'dotenv/config';
+// Load environment variables (.env.local first, fallback to .env)
+import '../lib/load-env';
 
 import { db, users, posts, kos, reviews, kosPhotos, favorites, bookings } from './index';
 import { hashPassword } from '@/lib/auth';

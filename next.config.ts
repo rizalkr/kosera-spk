@@ -14,7 +14,6 @@ const nextConfig: NextConfig = {
   // Image optimization for Docker
   images: {
     unoptimized: process.env.NODE_ENV === 'production',
-    domains: ['example.com', 'localhost'],
     remotePatterns: [
       {
         protocol: 'https',
@@ -22,7 +21,7 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'http',
-        hostname: '**',
+        hostname: 'localhost',
       },
     ],
   },

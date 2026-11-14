@@ -66,18 +66,19 @@ To maintain a concise main README, detailed technical documentation has been mod
 This platform is configured to execute deterministically using containers. Ensure Docker and Docker Compose are installed on the host machine before proceeding.
 
 ### 1. Environment Initialization
-Clone the repository and configure the environment variables based on the provided template.
+Clone the repository and configure the environment variables based on the provided templates.
 ```bash
 git clone <repository-url>
 cd kosera-spk
+cp .env.example .env.local
 cp .env.docker .env
 ```
-*(Note: You must configure the `DATABASE_URL` and `CLOUDINARY_URL` credentials in the `.env` file before proceeding)*
+*(Note: Configure `DATABASE_URL`, `JWT_SECRET`, `AI_SERVICE_URL`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET` before proceeding.)*
 
 ### 2. Build & Deploy Containers
 Execute Docker orchestration to isolate the development environment.
 ```bash
-docker compose up -d --build
+npm run docker:dev:detach
 ```
 
 ### 3. Schema Migration & Vector Seeding

@@ -1,8 +1,18 @@
 import bcryptjs from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 const SALT_ROUNDS = 12;
+
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (secret) {
+    return secret;
+  }
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('JWT_SECRET environment variable must be set in production');
+  }
+  return 'your-secret-key-change-in-production';
+}
 
 export type UserRole = 'ADMIN' | 'SELLER' | 'RENTER';
 
@@ -24,7 +34,7 @@ export async function verifyPassword(password: string, hashedPassword: string): 
 
 // Generate JWT token
 export function generateToken(payload: JWTPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { 
+  return jwt.sign(payload, getJwtSecret(), {
     expiresIn: '7d' // Token expires in 7 days
   });
 }
@@ -32,7 +42,7 @@ export function generateToken(payload: JWTPayload): string {
 // Verify JWT token
 export function verifyToken(token: string): JWTPayload | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as JWTPayload;
+    return jwt.verify(token, getJwtSecret()) as JWTPayload;
   } catch {
     return null;
   }

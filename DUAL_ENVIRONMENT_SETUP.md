@@ -7,20 +7,26 @@ The Kosera project is architected to operate across two distinct runtime environ
 
 ## Environment Configurations
 
-### 1. Local Development: `.env` or `.env.local`
+### 1. Local Development: `.env.local`
 ```bash
-# Host-level database connection
-DATABASE_URL=postgresql://kosera:kosera123@localhost:5432/kosera
+# Host-level database connection (5434 for Docker DB, 5432 for native PostgreSQL)
+DATABASE_URL=postgresql://kosera:kosera123@localhost:5434/kosera
 NEXT_PUBLIC_API_URL=http://localhost:3000
 NODE_ENV=development
 ```
 
-### 2. Docker Environment: `.env.docker`
+### 2. Docker Environment: `.env.docker` (copied to `.env` for Compose)
 ```bash
 # Container-level database connection (resolving to 'db' hostname)
 DATABASE_URL=postgresql://kosera:kosera123@db:5432/kosera
 NEXT_PUBLIC_API_URL=http://localhost:3000
 NODE_ENV=development
+```
+
+### 3. Production Database Scripts: `.env.production`
+```bash
+# Used by npm run db:*:prod scripts
+DATABASE_URL=postgresql://user:password@production-host:5432/postgres
 ```
 
 ## Command Line Interface (CLI) Directives
@@ -97,9 +103,11 @@ npm run docker:test:integration # Execute integration tests inside container
 ## System Mechanics
 
 ### Deterministic Environment Detection
-The `drizzle.config.ts` file implements a fallback detection algorithm:
+The `drizzle.config.ts` file and standalone CLI scripts implement a deterministic fallback order:
 1. Primary resolution: `.env.local` (Local configuration)
-2. Fallback resolution: `.env.docker` or standard `.env` (Container configuration)
+2. Fallback resolution: `.env` (Docker / default configuration)
+3. Production DB scripts (`npm run db:*:prod`): explicitly load `.env.production`
+4. Test runner (`tests/setup/env.ts`): loads `.env.test`, then `.env.local`, then `.env`
 
 ## Troubleshooting Protocol
 
