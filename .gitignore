@@ -50,7 +50,4 @@ docker/nginx/ssl/*.pem
 *.tsbuildinfo
 next-env.d.ts
 
-# local scraped assets
-gmaps_photos/
-
 /gmaps_photos/
