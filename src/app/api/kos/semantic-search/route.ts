@@ -15,6 +15,8 @@ import { z } from 'zod';
 const searchSchema = z.object({
   query: z.string().min(1, 'Search query is required').max(500),
   city: z.string().optional(),
+  subdistrict: z.string().optional(),
+  gender: z.enum(['putra', 'putri', 'campur']).optional(),
   minPrice: z.coerce.number().int().min(0).optional(),
   maxPrice: z.coerce.number().int().min(0).optional(),
   minRooms: z.coerce.number().int().min(1).optional(),
@@ -61,11 +63,11 @@ export async function POST(request: Request) {
       );
     }
 
-    const { query, city, minPrice, maxPrice, minRooms, facilities, limit } = parsed.data;
+    const { query, city, subdistrict, gender, minPrice, maxPrice, minRooms, facilities, limit } = parsed.data;
 
     const results = await semanticSearch(
       query,
-      { city, minPrice, maxPrice, minRooms, facilities },
+      { city, subdistrict, gender, minPrice, maxPrice, minRooms, facilities },
       limit
     );
 

@@ -178,7 +178,7 @@ export const getHybridRecommendations = async (
 
   if (query && query.trim().length > 0) {
     try {
-      const vectorResult = await vectorize(query.trim());
+      const vectorResult = await vectorize(query.trim(), 'query');
       queryEmbedding = vectorResult.embedding;
       algorithmMode = 'hybrid';
     } catch (error) {

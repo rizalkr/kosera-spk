@@ -77,10 +77,17 @@ export const kos = pgTable('kos', {
   // Geospatial coordinates (optional)
   latitude: doublePrecision('latitude'),
   longitude: doublePrecision('longitude'),
+  // Structured property metadata (e.g., from Mamikos dataset)
+  gender: varchar('gender', { length: 20 }), // 'putra' | 'putri' | 'campur'
+  subdistrict: text('subdistrict'), // Kecamatan / subdistrict
+  roomSize: text('room_size'), // Room dimensions (e.g., '3x4')
+  nearbyFacilities: text('nearby_facilities'), // Nearby landmarks / public places
+  rules: text('rules'), // Kos rules (e.g., 'Akses 24 Jam, Boleh Pasutri')
+  sourceUrl: text('source_url'), // External listing source URL
   // AI-Enhanced DSS fields (for semantic search)
   // Nullable for backward compatibility with existing data
   descriptionFull: text('description_full'), // Combined text for AI embedding
-  embedding: vector('embedding'), // Vector embedding from all-MiniLM-L6-v2 (384 dimensions)
+  embedding: vector('embedding'), // Vector embedding (384 dimensions)
   // Soft delete fields for kos
   deletedAt: timestamp('deleted_at'),
   deletedBy: integer('deleted_by'),

@@ -9,13 +9,15 @@
 
 import { db } from '@/db';
 import { kos, posts } from '@/db/schema';
-import { eq, and, isNull, sql, gte, lte, like, or } from 'drizzle-orm';
+import { eq, and, isNull, sql, gte, lte, ilike, or } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { vectorize, AIServiceError } from './client';
 
 /** Search filters for kos listings */
 interface SearchFilters {
   city?: string;
+  subdistrict?: string;
+  gender?: 'putra' | 'putri' | 'campur';
   minPrice?: number;
   maxPrice?: number;
   minRooms?: number;
@@ -29,7 +31,12 @@ interface SearchResult {
   name: string;
   address: string;
   city: string;
+  subdistrict: string | null;
+  gender: string | null;
+  roomSize: string | null;
   facilities: string | null;
+  nearbyFacilities: string | null;
+  rules: string | null;
   totalRooms: number;
   occupiedRooms: number | null;
   availableRooms: number;
@@ -49,6 +56,47 @@ interface SemanticSearchResponse {
   total: number;
   searchType: 'semantic' | 'fallback';
 }
+
+/** Build shared SQL filter conditions for semantic and fallback search */
+const buildFilterConditions = (filters: SearchFilters): SQL[] => {
+  const conditions: SQL[] = [
+    isNull(kos.deletedAt),
+    isNull(posts.deletedAt),
+  ];
+
+  if (filters.city) {
+    conditions.push(ilike(kos.city, `%${filters.city.trim()}%`));
+  }
+  if (filters.subdistrict) {
+    conditions.push(ilike(kos.subdistrict, `%${filters.subdistrict.trim()}%`));
+  }
+  if (filters.gender) {
+    conditions.push(eq(kos.gender, filters.gender));
+  }
+  if (filters.minPrice !== undefined) {
+    conditions.push(gte(posts.price, filters.minPrice));
+  }
+  if (filters.maxPrice !== undefined) {
+    conditions.push(lte(posts.price, filters.maxPrice));
+  }
+  if (filters.minRooms !== undefined) {
+    conditions.push(
+      sql`${kos.totalRooms} - COALESCE(${kos.occupiedRooms}, 0) >= ${filters.minRooms}`
+    );
+  }
+  if (filters.facilities && filters.facilities.length > 0) {
+    const facilityConditions = filters.facilities.map((f) =>
+      ilike(kos.facilities, `%${f}%`)
+    );
+    let facilityOr: SQL = facilityConditions[0];
+    for (let i = 1; i < facilityConditions.length; i++) {
+      facilityOr = or(facilityOr, facilityConditions[i]) as SQL;
+    }
+    conditions.push(facilityOr);
+  }
+
+  return conditions;
+};
 
 /**
  * Perform semantic search using vector similarity
@@ -79,39 +127,11 @@ export const semanticSearch = async (
 
   try {
     // Generate query embedding
-    const queryResult = await vectorize(trimmedQuery);
+    const queryResult = await vectorize(trimmedQuery, 'query');
     const queryEmbedding = queryResult.embedding;
 
     // Build filter conditions
-    const conditions: SQL[] = [
-      isNull(kos.deletedAt),
-      isNull(posts.deletedAt),
-    ];
-
-    if (filters.city) {
-      conditions.push(eq(kos.city, filters.city));
-    }
-    if (filters.minPrice !== undefined) {
-      conditions.push(gte(posts.price, filters.minPrice));
-    }
-    if (filters.maxPrice !== undefined) {
-      conditions.push(lte(posts.price, filters.maxPrice));
-    }
-    if (filters.minRooms !== undefined) {
-      conditions.push(
-        sql`${kos.totalRooms} - COALESCE(${kos.occupiedRooms}, 0) >= ${filters.minRooms}`
-      );
-    }
-    if (filters.facilities && filters.facilities.length > 0) {
-      const facilityConditions = filters.facilities.map((f) =>
-        like(kos.facilities, `%${f}%`)
-      );
-      let facilityOr: SQL = facilityConditions[0];
-      for (let i = 1; i < facilityConditions.length; i++) {
-        facilityOr = or(facilityOr, facilityConditions[i]) as SQL;
-      }
-      conditions.push(facilityOr);
-    }
+    const conditions = buildFilterConditions(filters);
 
     // Add condition: only search kos with embeddings
     conditions.push(sql`${kos.embedding} IS NOT NULL`);
@@ -119,32 +139,41 @@ export const semanticSearch = async (
     // Format embedding for pgvector
     const embeddingLiteral = `[${queryEmbedding.join(',')}]`;
 
-    // Execute semantic search using cosine distance
-    // Lower distance = higher similarity, so we negate for score
-    const results = await db
-      .select({
-        id: kos.id,
-        postId: kos.postId,
-        name: kos.name,
-        address: kos.address,
-        city: kos.city,
-        facilities: kos.facilities,
-        totalRooms: kos.totalRooms,
-        occupiedRooms: kos.occupiedRooms,
-        latitude: kos.latitude,
-        longitude: kos.longitude,
-        title: posts.title,
-        description: posts.description,
-        price: posts.price,
-        isFeatured: posts.isFeatured,
-        // Cosine similarity: 1 - cosine_distance
-        similarityScore: sql<number>`1 - (${kos.embedding} <=> ${embeddingLiteral}::vector)`,
-      })
-      .from(kos)
-      .innerJoin(posts, eq(kos.postId, posts.id))
-      .where(and(...conditions))
-      .orderBy(sql`${kos.embedding} <=> ${embeddingLiteral}::vector`)
-      .limit(limit);
+    // Execute semantic search using cosine distance.
+    // Enable pgvector 0.8+ iterative HNSW scan so SQL filters (city, gender, price)
+    // do not truncate results to the global top-ef_search candidates.
+    const results = await db.transaction(async (tx) => {
+      await tx.execute(sql`SET LOCAL hnsw.iterative_scan = relaxed_order`);
+      return tx
+        .select({
+          id: kos.id,
+          postId: kos.postId,
+          name: kos.name,
+          address: kos.address,
+          city: kos.city,
+          subdistrict: kos.subdistrict,
+          gender: kos.gender,
+          roomSize: kos.roomSize,
+          facilities: kos.facilities,
+          nearbyFacilities: kos.nearbyFacilities,
+          rules: kos.rules,
+          totalRooms: kos.totalRooms,
+          occupiedRooms: kos.occupiedRooms,
+          latitude: kos.latitude,
+          longitude: kos.longitude,
+          title: posts.title,
+          description: posts.description,
+          price: posts.price,
+          isFeatured: posts.isFeatured,
+          // Cosine similarity: 1 - cosine_distance
+          similarityScore: sql<number>`1 - (${kos.embedding} <=> ${embeddingLiteral}::vector)`,
+        })
+        .from(kos)
+        .innerJoin(posts, eq(kos.postId, posts.id))
+        .where(and(...conditions))
+        .orderBy(sql`${kos.embedding} <=> ${embeddingLiteral}::vector`)
+        .limit(limit);
+    });
 
     const searchResults: SearchResult[] = results.map((r) => ({
       ...r,
@@ -178,41 +207,23 @@ const fallbackTextSearch = async (
   filters: SearchFilters,
   limit: number
 ): Promise<SemanticSearchResponse> => {
-  const conditions: SQL[] = [
-    isNull(kos.deletedAt),
-    isNull(posts.deletedAt),
-  ];
+  const conditions = buildFilterConditions(filters);
 
   // Text search conditions
   const searchPattern = `%${query}%`;
   const textSearchConditions: SQL[] = [
-    like(kos.name, searchPattern),
-    like(kos.address, searchPattern),
-    like(kos.city, searchPattern),
-    like(posts.title, searchPattern),
-    like(posts.description, searchPattern),
+    ilike(kos.name, searchPattern),
+    ilike(kos.address, searchPattern),
+    ilike(kos.city, searchPattern),
+    ilike(kos.subdistrict, searchPattern),
+    ilike(posts.title, searchPattern),
+    ilike(posts.description, searchPattern),
   ];
   let textOr: SQL = textSearchConditions[0];
   for (let i = 1; i < textSearchConditions.length; i++) {
     textOr = or(textOr, textSearchConditions[i]) as SQL;
   }
   conditions.push(textOr);
-
-  // Apply filters
-  if (filters.city) {
-    conditions.push(eq(kos.city, filters.city));
-  }
-  if (filters.minPrice !== undefined) {
-    conditions.push(gte(posts.price, filters.minPrice));
-  }
-  if (filters.maxPrice !== undefined) {
-    conditions.push(lte(posts.price, filters.maxPrice));
-  }
-  if (filters.minRooms !== undefined) {
-    conditions.push(
-      sql`${kos.totalRooms} - COALESCE(${kos.occupiedRooms}, 0) >= ${filters.minRooms}`
-    );
-  }
 
   const results = await db
     .select({
@@ -221,7 +232,12 @@ const fallbackTextSearch = async (
       name: kos.name,
       address: kos.address,
       city: kos.city,
+      subdistrict: kos.subdistrict,
+      gender: kos.gender,
+      roomSize: kos.roomSize,
       facilities: kos.facilities,
+      nearbyFacilities: kos.nearbyFacilities,
+      rules: kos.rules,
       totalRooms: kos.totalRooms,
       occupiedRooms: kos.occupiedRooms,
       latitude: kos.latitude,
@@ -289,7 +305,12 @@ export const findSimilarKos = async (
       name: kos.name,
       address: kos.address,
       city: kos.city,
+      subdistrict: kos.subdistrict,
+      gender: kos.gender,
+      roomSize: kos.roomSize,
       facilities: kos.facilities,
+      nearbyFacilities: kos.nearbyFacilities,
+      rules: kos.rules,
       totalRooms: kos.totalRooms,
       occupiedRooms: kos.occupiedRooms,
       latitude: kos.latitude,

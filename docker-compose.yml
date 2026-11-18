@@ -64,7 +64,8 @@ services:
       - PORT=3000
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:3000}
       - NEXT_PUBLIC_ENABLE_REACT_QUERY_DEVTOOLS=${NEXT_PUBLIC_ENABLE_REACT_QUERY_DEVTOOLS:-true}
-      - AI_SERVICE_URL=${AI_SERVICE_URL:-http://localhost:8000}
+      - AI_SERVICE_URL=${DOCKER_AI_SERVICE_URL:-http://ai-service:8000}
+      - AI_API_KEY=${AI_API_KEY:-}
       - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME:-}
       - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY:-}
       - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET:-}
@@ -78,9 +79,34 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      ai-service:
+        condition: service_healthy
     networks:
       - kosera-network
     command: ["npm", "run", "dev"]
+
+  # Python FastAPI Embedding Microservice (CPU, 384-dim)
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    container_name: kosera-ai-service
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2}
+      - AI_API_KEY=${AI_API_KEY:-}
+    volumes:
+      - hf_cache:/root/.cache/huggingface
+    networks:
+      - kosera-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   # pgAdmin (Optional - Database Management UI)
   pgadmin:
@@ -106,6 +132,8 @@ volumes:
   postgres_test_data:
     driver: local
   pgadmin_data:
+    driver: local
+  hf_cache:
     driver: local
 
 networks:

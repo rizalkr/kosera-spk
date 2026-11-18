@@ -38,20 +38,43 @@ async function main() {
   }
 
   // Index in batches
-  console.log(`3. Indexing ${stats.unindexed} kos...`);
-  const result = await indexBatch(10, stats.unindexed);
+  console.log(`3. Indexing ${stats.unindexed} kos in batches of 50...`);
+  const batchSize = 50;
+  let totalProcessed = 0;
+  let totalSuccessful = 0;
+  let totalFailed = 0;
+  const failedItems: Array<{ kosId: number; error?: string }> = [];
+
+  while (totalProcessed < stats.unindexed) {
+    const result = await indexBatch(batchSize, batchSize);
+    if (result.totalProcessed === 0) break;
+
+    totalProcessed += result.totalProcessed;
+    totalSuccessful += result.successful;
+    totalFailed += result.failed;
+    failedItems.push(...result.results.filter((r) => !r.success));
+
+    console.log(
+      `   Progress: ${totalProcessed}/${stats.unindexed} (ok: ${totalSuccessful}, failed: ${totalFailed})`
+    );
+  }
 
   console.log(`\n4. Indexing complete!`);
-  console.log(`   Processed: ${result.totalProcessed}`);
-  console.log(`   Successful: ${result.successful}`);
-  console.log(`   Failed: ${result.failed}`);
+  console.log(`   Processed: ${totalProcessed}`);
+  console.log(`   Successful: ${totalSuccessful}`);
+  console.log(`   Failed: ${totalFailed}`);
 
-  if (result.failed > 0) {
+  if (failedItems.length > 0) {
     console.log('\n   Failed items:');
-    result.results
-      .filter((r) => !r.success)
+    failedItems
+      .slice(0, 20)
       .forEach((r) => console.log(`   - Kos ${r.kosId}: ${r.error}`));
   }
 }
 
-main().catch(console.error);
+main()
+  .then(() => process.exit(0))
+  .catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });

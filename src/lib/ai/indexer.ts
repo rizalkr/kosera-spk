@@ -20,6 +20,11 @@ interface KosIndexData {
   address: string;
   city: string;
   facilities: string | null;
+  gender?: string | null;
+  subdistrict?: string | null;
+  roomSize?: string | null;
+  nearbyFacilities?: string | null;
+  rules?: string | null;
   postTitle: string;
   postDescription: string;
   price: number;
@@ -54,10 +59,21 @@ interface IndexingSummary {
 export const buildEmbeddingText = (data: KosIndexData): string => {
   const parts: string[] = [];
 
-  // Basic information
-  parts.push(`Kos ${data.name} berlokasi di ${data.address}, ${data.city}.`);
+  // Location & gender context
+  const genderLabel = data.gender
+    ? ` (Kos ${data.gender.charAt(0).toUpperCase()}${data.gender.slice(1).toLowerCase()})`
+    : '';
+  const locationParts = [data.address];
+  if (
+    data.subdistrict &&
+    !data.address.toLowerCase().includes(data.subdistrict.toLowerCase())
+  ) {
+    locationParts.push(data.subdistrict);
+  }
+  locationParts.push(data.city);
+  parts.push(`Kos ${data.name}${genderLabel} berlokasi di ${locationParts.filter(Boolean).join(', ')}.`);
 
-  // Price and rooms
+  // Price, room size, and availability
   const priceFormatted = new Intl.NumberFormat('id-ID', {
     style: 'currency',
     currency: 'IDR',
@@ -65,8 +81,9 @@ export const buildEmbeddingText = (data: KosIndexData): string => {
   }).format(data.price);
 
   const availableRooms = data.totalRooms - (data.occupiedRooms || 0);
+  const sizeSegment = data.roomSize ? ` Ukuran kamar ${data.roomSize}.` : '';
   parts.push(
-    `Harga sewa ${priceFormatted} per bulan dengan ${availableRooms} kamar tersedia dari ${data.totalRooms} total kamar.`
+    `Harga sewa ${priceFormatted} per bulan dengan ${availableRooms} kamar tersedia dari ${data.totalRooms} total kamar.${sizeSegment}`
   );
 
   // Post details
@@ -76,6 +93,16 @@ export const buildEmbeddingText = (data: KosIndexData): string => {
   // Facilities
   if (data.facilities) {
     parts.push(`Fasilitas yang tersedia: ${data.facilities}.`);
+  }
+
+  // Nearby landmarks / public places
+  if (data.nearbyFacilities) {
+    parts.push(`Lokasi dekat dengan: ${data.nearbyFacilities}.`);
+  }
+
+  // Kos rules
+  if (data.rules) {
+    parts.push(`Peraturan kos: ${data.rules}.`);
   }
 
   return parts.join(' ').trim();
@@ -97,6 +124,11 @@ export const getKosWithoutEmbedding = async (
       address: kos.address,
       city: kos.city,
       facilities: kos.facilities,
+      gender: kos.gender,
+      subdistrict: kos.subdistrict,
+      roomSize: kos.roomSize,
+      nearbyFacilities: kos.nearbyFacilities,
+      rules: kos.rules,
       totalRooms: kos.totalRooms,
       occupiedRooms: kos.occupiedRooms,
       postTitle: posts.title,
@@ -135,6 +167,11 @@ export const indexSingleKos = async (kosId: number): Promise<IndexResult> => {
         address: kos.address,
         city: kos.city,
         facilities: kos.facilities,
+        gender: kos.gender,
+        subdistrict: kos.subdistrict,
+        roomSize: kos.roomSize,
+        nearbyFacilities: kos.nearbyFacilities,
+        rules: kos.rules,
         totalRooms: kos.totalRooms,
         occupiedRooms: kos.occupiedRooms,
         postTitle: posts.title,
@@ -154,7 +191,7 @@ export const indexSingleKos = async (kosId: number): Promise<IndexResult> => {
     const embeddingText = buildEmbeddingText(kosData);
 
     // Generate embedding
-    const vectorResult = await vectorize(embeddingText);
+    const vectorResult = await vectorize(embeddingText, 'passage');
 
     // Store embedding and full text in database
     await db
@@ -210,21 +247,21 @@ export const indexBatch = async (
 
     try {
       // Batch vectorize
-      const batchResult = await vectorizeBatch(texts);
+      const batchResult = await vectorizeBatch(texts, 'passage');
 
-      // Store embeddings in database
-      for (let i = 0; i < kosList.length; i++) {
-        const kosData = kosList[i];
-        const embeddingResult = batchResult.results[i];
-
-        await db
-          .update(kos)
-          .set({
-            descriptionFull: texts[i],
-            embedding: embeddingResult.embedding,
-          })
-          .where(eq(kos.id, kosData.id));
-
+      // Store embeddings in database concurrently per batch
+      await Promise.all(
+        kosList.map((kosData, i) =>
+          db
+            .update(kos)
+            .set({
+              descriptionFull: texts[i],
+              embedding: batchResult.results[i].embedding,
+            })
+            .where(eq(kos.id, kosData.id))
+        )
+      );
+      for (const kosData of kosList) {
         results.push({ kosId: kosData.id, success: true });
       }
     } catch (error) {

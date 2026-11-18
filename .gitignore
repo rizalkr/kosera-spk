@@ -51,3 +51,4 @@ docker/nginx/ssl/*.pem
 next-env.d.ts
 
 /gmaps_photos/
+/public/images/mamikos/

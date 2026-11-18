@@ -19,6 +19,7 @@ interface VectorizeResponse {
 interface AIVectorizeResponse {
   vector: number[];
   dimension: number;
+  model?: string;
   status: string;
 }
 
@@ -34,6 +35,7 @@ interface AIBatchVectorizeResponse {
   vectors: number[][];
   count: number;
   dimension: number;
+  model?: string;
   status: string;
 }
 
@@ -69,6 +71,20 @@ export class AIServiceError extends Error {
  */
 const getAIServiceUrl = (): string => {
   return process.env.AI_SERVICE_URL || 'http://ai-service:8000';
+};
+
+/**
+ * Build request headers including optional API key
+ */
+const buildHeaders = (): Record<string, string> => {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  };
+  if (process.env.AI_API_KEY) {
+    headers['X-API-Key'] = process.env.AI_API_KEY;
+  }
+  return headers;
 };
 
 /**
@@ -152,17 +168,17 @@ export const checkHealth = async (): Promise<HealthResponse> => {
  * @returns Embedding vector with metadata
  * @throws AIServiceError if vectorization fails
  */
-export const vectorize = async (text: string): Promise<VectorizeResponse> => {
+export const vectorize = async (
+  text: string,
+  mode?: 'query' | 'passage'
+): Promise<VectorizeResponse> => {
   const baseUrl = getAIServiceUrl();
 
   try {
     const response = await fetchWithRetry(`${baseUrl}/vectorize`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: JSON.stringify({ text }),
+      headers: buildHeaders(),
+      body: JSON.stringify(mode ? { text, mode } : { text }),
     });
 
     if (!response.ok) {
@@ -180,7 +196,7 @@ export const vectorize = async (text: string): Promise<VectorizeResponse> => {
       text,
       embedding: aiResponse.vector,
       dimension: aiResponse.dimension,
-      model: 'paraphrase-multilingual-MiniLM-L12-v2',
+      model: aiResponse.model || 'paraphrase-multilingual-MiniLM-L12-v2',
     };
   } catch (error) {
     if (error instanceof AIServiceError) throw error;
@@ -200,7 +216,8 @@ export const vectorize = async (text: string): Promise<VectorizeResponse> => {
  * @throws AIServiceError if any text is empty or vectorization fails
  */
 export const vectorizeBatch = async (
-  texts: string[]
+  texts: string[],
+  mode?: 'query' | 'passage'
 ): Promise<BatchVectorizeResponse> => {
   const baseUrl = getAIServiceUrl();
 
@@ -220,11 +237,8 @@ export const vectorizeBatch = async (
   try {
     const response = await fetchWithRetry(`${baseUrl}/vectorize/batch`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: JSON.stringify({ texts }),
+      headers: buildHeaders(),
+      body: JSON.stringify(mode ? { texts, mode } : { texts }),
     });
 
     if (!response.ok) {
@@ -238,15 +252,16 @@ export const vectorizeBatch = async (
 
     // Map AI service response to expected format
     const aiResponse = (await response.json()) as AIBatchVectorizeResponse;
+    const modelName = aiResponse.model || 'paraphrase-multilingual-MiniLM-L12-v2';
     return {
       results: texts.map((text, i) => ({
         text,
         embedding: aiResponse.vectors[i],
         dimension: aiResponse.dimension,
-        model: 'paraphrase-multilingual-MiniLM-L12-v2',
+        model: modelName,
       })),
       total: aiResponse.count,
-      model: 'paraphrase-multilingual-MiniLM-L12-v2',
+      model: modelName,
     };
   } catch (error) {
     if (error instanceof AIServiceError) throw error;
