@@ -2,6 +2,7 @@ import { withAdmin, AuthenticatedRequest } from '@/lib/middleware';
 import { db, kos, posts } from '@/db';
 import { eq, sql } from 'drizzle-orm';
 import { ok, fail } from '@/types/api';
+import { scheduleKosReindex } from '@/lib/ai/indexer';
 import { z } from 'zod';
 
 // Restore kos from archive
@@ -47,6 +48,9 @@ async function restoreKosHandler(request: AuthenticatedRequest) {
       .update(posts)
       .set({ deletedAt: null, deletedBy: null })
       .where(eq(posts.id, existingKos[0].postId));
+
+    // Ensure the restored listing has a fresh embedding (non-blocking)
+    scheduleKosReindex(kosId, 'restore');
 
     return ok('Kos restored from archive successfully', { kosId });
   } catch (error) {

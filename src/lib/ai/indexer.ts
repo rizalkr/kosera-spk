@@ -11,6 +11,7 @@
 import { db } from '@/db';
 import { kos, posts } from '@/db/schema';
 import { eq, isNull, and, sql } from 'drizzle-orm';
+import { after } from 'next/server';
 import { vectorize, vectorizeBatch, AIServiceError } from './client';
 
 /** Kos data needed for building embedding text */
@@ -299,6 +300,62 @@ export const indexBatch = async (
 export const reindexKos = async (kosId: number): Promise<IndexResult> => {
   // Same as indexSingleKos - it will overwrite existing embedding
   return indexSingleKos(kosId);
+};
+
+/** Why a re-index was scheduled (used for structured logs only) */
+export type KosReindexReason = 'create' | 'update' | 'restore' | 'manual';
+
+/**
+ * Run a re-index and swallow every failure. Never throws.
+ *
+ * Exported for tests and for callers that want to await completion
+ * (e.g. scripts). API routes should use `scheduleKosReindex` instead.
+ */
+export const runKosReindexSafely = async (
+  kosId: number,
+  reason: KosReindexReason = 'manual'
+): Promise<IndexResult> => {
+  try {
+    const result = await reindexKos(kosId);
+    if (!result.success) {
+      console.warn('[ai.reindex] Embedding refresh failed', {
+        kosId,
+        reason,
+        error: result.error,
+      });
+    }
+    return result;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn('[ai.reindex] Unexpected embedding refresh error', { kosId, reason, error: message });
+    return { kosId, success: false, error: message };
+  }
+};
+
+/**
+ * Schedule a non-blocking embedding refresh for a kos listing.
+ *
+ * Call after the kos/post mutation has been written. Uses Next.js `after()`
+ * so the work runs once the response has been sent, keeping CRUD latency
+ * unchanged. Outside a request scope (scripts, tests without a request
+ * context) `after()` throws; we then fall back to fire-and-forget.
+ *
+ * The mutation response is never affected: if the embedding service is
+ * offline, a structured warning is logged and the kos keeps its previous
+ * embedding (it can be repaired later via the admin AI indexing endpoint).
+ */
+export const scheduleKosReindex = (kosId: number, reason: KosReindexReason = 'update'): void => {
+  if (!Number.isInteger(kosId) || kosId <= 0) return;
+
+  const task = async (): Promise<void> => {
+    await runKosReindexSafely(kosId, reason);
+  };
+
+  try {
+    after(task);
+  } catch {
+    void task();
+  }
 };
 
 /**

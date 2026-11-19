@@ -25,7 +25,10 @@ export {
   indexSingleKos,
   indexBatch,
   reindexKos,
+  runKosReindexSafely,
+  scheduleKosReindex,
   getIndexingStats,
+  type KosReindexReason,
 } from './indexer';
 
 // Semantic Search

@@ -4,6 +4,7 @@ import { kos, posts } from '@/db/schema';
 import { eq, and, gte, lte } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { ok, fail } from '@/types/api';
+import { scheduleKosReindex } from '@/lib/ai/indexer';
 import { z } from 'zod';
 
 function parseKosQuery(url: string) {
@@ -125,6 +126,9 @@ export const POST = withSellerOrAdmin(async (request: AuthenticatedRequest) => {
         deletedBy: null,
       })
       .returning();
+
+    // Generate the AI embedding after the response is sent (never blocks/fails the request)
+    scheduleKosReindex(newKos.id, 'create');
 
     return ok('Kos created successfully', {
       kos: {

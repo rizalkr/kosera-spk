@@ -3,6 +3,7 @@ import { db } from '@/db';
 import { kos, posts, users, reviews } from '@/db/schema';
 import { eq, desc, count, avg, sql } from 'drizzle-orm';
 import { ok, fail } from '@/types/api';
+import { scheduleKosReindex } from '@/lib/ai/indexer';
 import { z } from 'zod';
 
 // GET /api/kos/[id] - Get specific kos by ID with reviews and statistics (public)
@@ -145,6 +146,9 @@ async function updateKosHandler(request: AuthenticatedRequest, kosId: number) {
       .update(posts)
       .set({ title, description, price, updatedAt: new Date() })
       .where(eq(posts.id, existingKos[0].postId));
+
+    // Refresh the AI embedding after the response is sent (never blocks/fails the request)
+    scheduleKosReindex(kosId, 'update');
 
     const updated = await db
       .select({

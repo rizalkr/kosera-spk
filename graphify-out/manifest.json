@@ -246,9 +246,9 @@
     "semantic_hash": ""
   },
   "src/app/api/admin/kos/[id]/restore/route.ts": {
-    "mtime": 1758536671.8325408,
-    "seen": 1794989559.0568407,
-    "ast_hash": "7dc0a43dd49e5baafc067eac25c992a5",
+    "mtime": 1795065973.7585356,
+    "seen": 1795066204.899469,
+    "ast_hash": "57d0cd41ea397a1401144faffd017ce5",
     "semantic_hash": ""
   },
   "src/app/api/admin/kos/[id]/route.ts": {
@@ -366,9 +366,9 @@
     "semantic_hash": ""
   },
   "src/app/api/kos/[id]/route.ts": {
-    "mtime": 1758536671.8348908,
-    "seen": 1794989559.0568607,
-    "ast_hash": "8910ac37a5e9f4accf675115f6a0ad59",
+    "mtime": 1795065973.5688417,
+    "seen": 1795066204.9004202,
+    "ast_hash": "073c76e825932b772479d5ede77e5084",
     "semantic_hash": ""
   },
   "src/app/api/kos/[id]/view/route.ts": {
@@ -414,9 +414,9 @@
     "semantic_hash": ""
   },
   "src/app/api/kos/route.ts": {
-    "mtime": 1771067573.0879,
-    "seen": 1794989559.0568688,
-    "ast_hash": "a474204a80c595b0cc70bd2841fd5890",
+    "mtime": 1795065973.3339148,
+    "seen": 1795066204.9007435,
+    "ast_hash": "afe9c2b8f635c3b61ac549fbe25b1fed",
     "semantic_hash": ""
   },
   "src/app/api/kos/search/route.ts": {
@@ -1674,15 +1674,15 @@
     "semantic_hash": ""
   },
   "src/lib/ai/index.ts": {
-    "mtime": 1795065655.1527398,
-    "seen": 1795065792.5752838,
-    "ast_hash": "cb6e0df5ebf4f27a7448d7853e6fa048",
+    "mtime": 1795065973.127834,
+    "seen": 1795066204.9105992,
+    "ast_hash": "e724ae2589c288fc97219ae2c58a466a",
     "semantic_hash": ""
   },
   "src/lib/ai/indexer.ts": {
-    "mtime": 1794988232.1987567,
-    "seen": 1794989559.0570688,
-    "ast_hash": "d88984feccc558cd3ff9ade18111071e",
+    "mtime": 1795065958.455582,
+    "seen": 1795066204.910601,
+    "ast_hash": "f3760e456b197469daf531ac63024e6b",
     "semantic_hash": ""
   },
   "src/lib/ai/search.ts": {
@@ -2457,6 +2457,12 @@
     "mtime": 1795065603.6740742,
     "seen": 1795065792.57528,
     "ast_hash": "d6bfa528d202592e1ec6fb816666be92",
+    "semantic_hash": ""
+  },
+  "tests/unit/ai-reindex.test.ts": {
+    "mtime": 1795066176.4628365,
+    "seen": 1795066204.912784,
+    "ast_hash": "f7429753f36305c2614001f309daf946",
     "semantic_hash": ""
   },
   "package-lock.json": {
