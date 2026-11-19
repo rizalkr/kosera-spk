@@ -13,6 +13,7 @@ import { kosPhotos, posts } from '@/db/schema';
 import { inArray } from 'drizzle-orm';
 import { semanticSearch } from './search';
 import { getHybridRecommendations } from './hybrid';
+import { toUnitScore } from './hybrid-scoring';
 import {
   parseSSEFrames,
   type ChatRole,
@@ -370,12 +371,14 @@ export const executeChatTool = async (
         rating: Number.isFinite(parsedRating) ? parsedRating : null,
         facilities: parseFacilitiesList(rec.facilities, 8),
         imageUrl: primaryPhoto,
+        // UI cards: PM and hybrid on 0-100, similarity on 0-1 (same as semanticSearch cards)
         profileMatchingScore: rec.hybridDetails.profileMatchingScore,
-        similarityScore: rec.hybridDetails.semanticSimilarityScore,
+        similarityScore: toUnitScore(rec.hybridDetails.semanticSimilarityScore),
         hybridScore: rec.hybridScore,
       };
     });
 
+    // LLM payload: all scores on the 0-1 scale used by the SFT v1 <tool_response> schema
     const llmResults = hybridResp.recommendations.map((rec, index) => {
       const parsedRating = Number(rec.averageRating);
       return {
@@ -387,9 +390,9 @@ export const executeChatTool = async (
         availableRooms: rec.availableRooms,
         rating: Number.isFinite(parsedRating) ? parsedRating : 0,
         facilities: parseFacilitiesList(rec.facilities, 8),
-        profileMatchingScore: rec.hybridDetails.profileMatchingScore,
-        semanticScore: rec.hybridDetails.semanticSimilarityScore,
-        hybridScore: rec.hybridScore,
+        profileMatchingScore: toUnitScore(rec.hybridDetails.profileMatchingScore),
+        semanticScore: toUnitScore(rec.hybridDetails.semanticSimilarityScore),
+        hybridScore: toUnitScore(rec.hybridScore),
       };
     });
 

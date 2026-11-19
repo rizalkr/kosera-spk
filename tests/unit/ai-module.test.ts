@@ -8,35 +8,27 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import {
+  normalizeSemanticScore,
+  normalizeProfileMatchingScore,
+  normalizeHybridWeights,
+  computeHybridScore,
+  toUnitScore,
+} from '@/lib/ai/hybrid-scoring';
 
 // ============================================================
 // HYBRID SCORE CALCULATION TESTS
 // ============================================================
 
 /**
- * Normalize cosine similarity (0-1) to score (0-100)
- * Reimplemented here for testing without importing the module
- */
-const normalizeSemanticScore = (similarity: number): number => {
-  const clamped = Math.max(0, Math.min(1, similarity));
-  return Math.round(clamped * 100);
-};
-
-/**
- * Calculate hybrid score using weighted average
- * Reimplemented here for testing
+ * Thin wrapper over the production `computeHybridScore` (hybrid mode).
  */
 const calculateHybridScore = (
   pmScore: number,
   aiScore: number,
   weightPM: number,
   weightAI: number
-): number => {
-  const totalWeight = weightPM + weightAI;
-  const normalizedWeightPM = weightPM / totalWeight;
-  const normalizedWeightAI = weightAI / totalWeight;
-  return Math.round((normalizedWeightPM * pmScore) + (normalizedWeightAI * aiScore));
-};
+): number => computeHybridScore(pmScore, aiScore, weightPM, weightAI, 'hybrid');
 
 describe('Hybrid Algorithm', () => {
   describe('Default Weights', () => {
@@ -226,6 +218,90 @@ describe('Hybrid Algorithm', () => {
     it('should handle similarity close to boundaries', () => {
       expect(normalizeSemanticScore(0.994)).toBe(99);
       expect(normalizeSemanticScore(0.995)).toBe(100); // Rounds up
+    });
+  });
+
+  describe('Profile Matching Score Normalization (Kusrini 0-5 -> 0-100)', () => {
+    it('maps the GAP weight scale endpoints and midpoints', () => {
+      expect(normalizeProfileMatchingScore(0)).toBe(0);
+      expect(normalizeProfileMatchingScore(1)).toBe(20);
+      expect(normalizeProfileMatchingScore(2.5)).toBe(50);
+      expect(normalizeProfileMatchingScore(4.5)).toBe(90);
+      expect(normalizeProfileMatchingScore(5)).toBe(100);
+    });
+
+    it('rounds to nearest integer', () => {
+      // 4.23 / 5 * 100 = 84.6 -> 85
+      expect(normalizeProfileMatchingScore(4.23)).toBe(85);
+    });
+
+    it('clamps out-of-range and invalid values', () => {
+      expect(normalizeProfileMatchingScore(-1)).toBe(0);
+      expect(normalizeProfileMatchingScore(7)).toBe(100);
+      expect(normalizeProfileMatchingScore(Number.NaN)).toBe(0);
+    });
+  });
+
+  describe('Weight Normalization', () => {
+    it('normalizes weights that do not sum to 1', () => {
+      const w = normalizeHybridWeights(7, 3);
+      expect(w.weightPM).toBeCloseTo(0.7);
+      expect(w.weightAI).toBeCloseTo(0.3);
+    });
+
+    it('falls back to an even split when both weights are zero', () => {
+      expect(normalizeHybridWeights(0, 0)).toEqual({ weightPM: 0.5, weightAI: 0.5 });
+    });
+  });
+
+  describe('Scale Consistency (PM 0.7 / AI 0.3 on 0-100)', () => {
+    it('returns the normalized PM score in profile-matching-only mode', () => {
+      const pm = normalizeProfileMatchingScore(4.5);
+      expect(computeHybridScore(pm, 0, 0.7, 0.3, 'profile-matching-only')).toBe(90);
+    });
+
+    it('gives Profile Matching 70% influence once both scores share a 0-100 scale', () => {
+      // Perfect PM match, zero semantic match -> 70
+      expect(computeHybridScore(normalizeProfileMatchingScore(5), 0, 0.7, 0.3)).toBe(70);
+      // Zero PM match, perfect semantic match -> 30
+      expect(computeHybridScore(normalizeProfileMatchingScore(0), 100, 0.7, 0.3)).toBe(30);
+    });
+
+    it('ranks a strong preference match above a strong semantic-only match', () => {
+      // Kos A: matches saved preferences (PM 4.8/5) but weaker semantic match (0.55)
+      const kosA = computeHybridScore(
+        normalizeProfileMatchingScore(4.8),
+        normalizeSemanticScore(0.55),
+        0.7,
+        0.3
+      );
+      // Kos B: generic listing (PM 2.0/5) with a strong semantic match (0.95)
+      const kosB = computeHybridScore(
+        normalizeProfileMatchingScore(2.0),
+        normalizeSemanticScore(0.95),
+        0.7,
+        0.3
+      );
+      // A: 0.7*96 + 0.3*55 = 83.7 -> 84 ; B: 0.7*40 + 0.3*95 = 56.5 -> 57
+      expect(kosA).toBe(84);
+      expect(kosB).toBe(57);
+      expect(kosA).toBeGreaterThan(kosB);
+    });
+
+    it('documents the pre-fix bug: raw 0-5 PM let semantic weight dominate', () => {
+      const rawA = Math.round(0.7 * 4.8 + 0.3 * 55); // 20
+      const rawB = Math.round(0.7 * 2.0 + 0.3 * 95); // 30
+      expect(rawB).toBeGreaterThan(rawA);
+    });
+  });
+
+  describe('Unit Score Conversion (SFT v1 tool_response schema)', () => {
+    it('converts 0-100 scores to 0-1 with 4 decimals', () => {
+      expect(toUnitScore(84)).toBe(0.84);
+      expect(toUnitScore(100)).toBe(1);
+      expect(toUnitScore(0)).toBe(0);
+      expect(toUnitScore(150)).toBe(1);
+      expect(toUnitScore(-5)).toBe(0);
     });
   });
 });

@@ -1668,15 +1668,15 @@
     "semantic_hash": ""
   },
   "src/lib/ai/hybrid.ts": {
-    "mtime": 1794988269.7434342,
-    "seen": 1794989559.0570672,
-    "ast_hash": "755a56a231bffb147d6676d8fed590ae",
+    "mtime": 1795065634.8619947,
+    "seen": 1795065792.575282,
+    "ast_hash": "56aa2cb2f40d070caadabd1f5490b111",
     "semantic_hash": ""
   },
   "src/lib/ai/index.ts": {
-    "mtime": 1795060910.4431636,
-    "seen": 1795065584.686908,
-    "ast_hash": "0723192bc203bb8bc4fd24349cead8d5",
+    "mtime": 1795065655.1527398,
+    "seen": 1795065792.5752838,
+    "ast_hash": "cb6e0df5ebf4f27a7448d7853e6fa048",
     "semantic_hash": ""
   },
   "src/lib/ai/indexer.ts": {
@@ -2040,9 +2040,9 @@
     "semantic_hash": ""
   },
   "tests/unit/ai-module.test.ts": {
-    "mtime": 1771064521.5606306,
-    "seen": 1794989559.0571253,
-    "ast_hash": "c98293346c7641b3642f352701f20f79",
+    "mtime": 1795065683.425837,
+    "seen": 1795065792.5775073,
+    "ast_hash": "8fb852c7a13bc709ddbfcee79e12899b",
     "semantic_hash": ""
   },
   "tests/unit/api-response.test.ts": {
@@ -2346,9 +2346,9 @@
     "semantic_hash": ""
   },
   "src/components/features/chat/KoseraChatWidget.tsx": {
-    "mtime": 1795063431.5927768,
-    "seen": 1795065584.6829884,
-    "ast_hash": "c6ef4ee80d5694e0282de3bdafecbb78",
+    "mtime": 1795065655.218348,
+    "seen": 1795065792.569221,
+    "ast_hash": "40232a14fdf48b021474eca2efda1e93",
     "semantic_hash": ""
   },
   "src/components/features/compare/GlobalCompareDock.tsx": {
@@ -2382,9 +2382,9 @@
     "semantic_hash": ""
   },
   "src/lib/ai/chat.ts": {
-    "mtime": 1795060961.3165455,
-    "seen": 1795065584.686801,
-    "ast_hash": "f4a854b8c528141fdb3500e0c6874fd6",
+    "mtime": 1795065655.0623453,
+    "seen": 1795065792.5752354,
+    "ast_hash": "51136b8b4246fb36ca5a8a8bd2ee3195",
     "semantic_hash": ""
   },
   "src/lib/utils/discovery.ts": {
@@ -2394,9 +2394,9 @@
     "semantic_hash": ""
   },
   "tests/unit/ai-chat.test.ts": {
-    "mtime": 1795063435.4798493,
-    "seen": 1795065584.6895964,
-    "ast_hash": "cbcadf460311edcaf21e878cf91d5350",
+    "mtime": 1795065691.3404667,
+    "seen": 1795065792.5775058,
+    "ast_hash": "aaee674f9a5f92abed5b90b4eb290bb1",
     "semantic_hash": ""
   },
   "tests/unit/compare-store.test.ts": {
@@ -2451,6 +2451,12 @@
     "mtime": 1795051464.6976871,
     "seen": 1795065584.6911063,
     "ast_hash": "db079ba3b8fa2865d10344767fbbac3b",
+    "semantic_hash": ""
+  },
+  "src/lib/ai/hybrid-scoring.ts": {
+    "mtime": 1795065603.6740742,
+    "seen": 1795065792.57528,
+    "ast_hash": "d6bfa528d202592e1ec6fb816666be92",
     "semantic_hash": ""
   },
   "package-lock.json": {

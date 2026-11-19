@@ -41,6 +41,14 @@ export {
   DEFAULT_HYBRID_WEIGHT_AI,
 } from './hybrid';
 
+export {
+  normalizeProfileMatchingScore,
+  normalizeSemanticScore,
+  normalizeHybridWeights,
+  computeHybridScore,
+  toUnitScore,
+} from './hybrid-scoring';
+
 // Conversational RAG & LLM Chat Gateway
 export {
   getLLMServiceUrl,

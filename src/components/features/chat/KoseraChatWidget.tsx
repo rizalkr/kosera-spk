@@ -35,9 +35,9 @@ function formatRupiah(amount: number): string {
   return `Rp ${amount.toLocaleString('id-ID')}`;
 }
 
+/** Hybrid scores from /api/chat are already on a 0-100 scale; only clamp and round. */
 function normalizeSpkScore(score: number): number {
-  const pct = score <= 5 ? (score / 5) * 100 : score;
-  return Math.max(0, Math.min(100, Math.round(pct)));
+  return Math.max(0, Math.min(100, Math.round(score)));
 }
 
 interface ChatMessageRowProps {

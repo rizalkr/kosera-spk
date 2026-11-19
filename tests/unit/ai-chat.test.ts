@@ -230,8 +230,22 @@ describe('AI Chat Helpers', () => {
         rank: 1,
         kosId: 77,
         hybridScore: 88,
+        profileMatchingScore: 90,
+        similarityScore: 0.84,
         imageUrl: '/images/mamikos/77.jpg',
       });
+
+      // LLM payload uses the SFT v1 0-1 score scale
+      const payload = res.llmPayload as {
+        results: Array<{ profileMatchingScore: number; semanticScore: number; hybridScore: number }>;
+        weights: { weightPM: number; weightAI: number };
+      };
+      expect(payload.results[0]).toMatchObject({
+        profileMatchingScore: 0.9,
+        semanticScore: 0.84,
+        hybridScore: 0.88,
+      });
+      expect(payload.weights).toEqual({ weightPM: 0.7, weightAI: 0.3 });
     });
   });
 });

@@ -33,6 +33,19 @@ import {
 } from '@/lib/profile-matching/scoring';
 import { mapDbPreferenceToData } from '@/lib/profile-matching/algorithm';
 import { vectorize, AIServiceError } from './client';
+import {
+  normalizeProfileMatchingScore,
+  normalizeSemanticScore,
+  normalizeHybridWeights,
+  computeHybridScore,
+} from './hybrid-scoring';
+
+export {
+  normalizeProfileMatchingScore,
+  normalizeSemanticScore,
+  normalizeHybridWeights,
+  computeHybridScore,
+} from './hybrid-scoring';
 
 // ============================================================
 // CONSTANTS & TYPES
@@ -58,14 +71,20 @@ interface HybridRecommendationOptions {
   minScore?: number;
 }
 
-/** Extended result with hybrid scoring details */
+/**
+ * Extended result with hybrid scoring details.
+ *
+ * Note: `matchingScore` (inherited) stays on the raw Kusrini [0..5] scale for
+ * backward compatibility with existing Profile Matching UI consumers.
+ */
 interface HybridKosResult extends KosMatchingResult {
   /** AI semantic similarity score (0-100) */
   semanticScore: number;
-  /** Combined hybrid score */
+  /** Combined hybrid score (0-100) */
   hybridScore: number;
-  /** Breakdown of hybrid score components */
+  /** Breakdown of hybrid score components (all scores on 0-100) */
   hybridDetails: {
+    /** Profile Matching score normalized to 0-100 */
     profileMatchingScore: number;
     semanticSimilarityScore: number;
     weightPM: number;
@@ -88,19 +107,6 @@ interface HybridRecommendationResponse {
     hasPrev: boolean;
   };
 }
-
-// ============================================================
-// HELPER FUNCTIONS
-// ============================================================
-
-/**
- * Normalize cosine similarity (0-1) to score (0-100)
- */
-const normalizeSemanticScore = (similarity: number): number => {
-  // Clamp between 0 and 1, then scale to 0-100
-  const clamped = Math.max(0, Math.min(1, similarity));
-  return Math.round(clamped * 100);
-};
 
 // ============================================================
 // MAIN ALGORITHM
@@ -137,9 +143,8 @@ export const getHybridRecommendations = async (
   const offset = (page - 1) * limit;
 
   // Validate weights sum to 1
-  const totalWeight = weightPM + weightAI;
-  const normalizedWeightPM = weightPM / totalWeight;
-  const normalizedWeightAI = weightAI / totalWeight;
+  const { weightPM: normalizedWeightPM, weightAI: normalizedWeightAI } =
+    normalizeHybridWeights(weightPM, weightAI);
 
   // 1. Get user preferences
   const [preferencesRow] = await db
@@ -150,13 +155,37 @@ export const getHybridRecommendations = async (
 
   const preferences = preferencesRow ? mapDbPreferenceToData(preferencesRow) : null;
 
+  // Guest / no-preference fallback. Used for both SQL filtering and scoring
+  // so that guest results respect `needsAvailableRoom: true` consistently.
+  const effectivePreferences: UserPreferencesData = preferences ?? {
+    id: 0,
+    userId,
+    budgetMin: null,
+    budgetMax: null,
+    preferredCities: [],
+    preferredLatitude: null,
+    preferredLongitude: null,
+    maxDistanceKm: null,
+    requiredFacilities: [],
+    optionalFacilities: [],
+    roomType: 'any',
+    minRating: 3.0,
+    needsAvailableRoom: true,
+    weightPrice: DEFAULT_WEIGHT_PRICE,
+    weightLocation: DEFAULT_WEIGHT_LOCATION,
+    weightFacilities: DEFAULT_WEIGHT_FACILITIES,
+    weightRating: DEFAULT_WEIGHT_RATING,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
   // 2. Build base query conditions
   const conditions = [
     isNull(kos.deletedAt),
     isNull(posts.deletedAt),
   ];
 
-  if (preferences?.needsAvailableRoom) {
+  if (effectivePreferences.needsAvailableRoom) {
     conditions.push(
       sql`(${kos.totalRooms} - COALESCE(${kos.occupiedRooms}, 0)) > 0`
     );
@@ -298,28 +327,6 @@ export const getHybridRecommendations = async (
   }
 
   // 6. Calculate hybrid scores
-  const effectivePreferences: UserPreferencesData = preferences ?? {
-    id: 0,
-    userId,
-    budgetMin: null,
-    budgetMax: null,
-    preferredCities: [],
-    preferredLatitude: null,
-    preferredLongitude: null,
-    maxDistanceKm: null,
-    requiredFacilities: [],
-    optionalFacilities: [],
-    roomType: 'any',
-    minRating: 3.0,
-    needsAvailableRoom: true,
-    weightPrice: DEFAULT_WEIGHT_PRICE,
-    weightLocation: DEFAULT_WEIGHT_LOCATION,
-    weightFacilities: DEFAULT_WEIGHT_FACILITIES,
-    weightRating: DEFAULT_WEIGHT_RATING,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-
   let scoredResults: HybridKosResult[] = kosResults.map((kosRow) => {
     // Calculate Profile Matching score
     const kosData = {
@@ -334,22 +341,22 @@ export const getHybridRecommendations = async (
     };
 
     const matchingResult = calculateMatchingScore(kosData, effectivePreferences);
+    // Raw Kusrini GAP score [0..5] and its [0..100] normalization
     const pmScore = matchingResult.score;
+    const pmScoreNormalized = normalizeProfileMatchingScore(pmScore);
 
     // Get semantic similarity and normalize to 0-100
     const rawSimilarity = Number(kosRow.semanticSimilarity) || 0;
     const semanticScore = normalizeSemanticScore(rawSimilarity);
 
-    // Calculate hybrid score
-    let hybridScore: number;
-    if (algorithmMode === 'hybrid') {
-      hybridScore = Math.round(
-        (normalizedWeightPM * pmScore) + (normalizedWeightAI * semanticScore)
-      );
-    } else {
-      // Profile Matching only mode
-      hybridScore = pmScore;
-    }
+    // Calculate hybrid score on a common 0-100 scale
+    const hybridScore = computeHybridScore(
+      pmScoreNormalized,
+      semanticScore,
+      normalizedWeightPM,
+      normalizedWeightAI,
+      algorithmMode
+    );
 
     const photos = photosByKosId.get(kosRow.id) ?? [];
 
@@ -391,7 +398,7 @@ export const getHybridRecommendations = async (
       semanticScore,
       hybridScore,
       hybridDetails: {
-        profileMatchingScore: pmScore,
+        profileMatchingScore: pmScoreNormalized,
         semanticSimilarityScore: semanticScore,
         weightPM: normalizedWeightPM,
         weightAI: normalizedWeightAI,
