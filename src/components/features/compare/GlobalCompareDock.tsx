@@ -77,7 +77,7 @@ export default function GlobalCompareDock() {
         role="region"
         aria-label="Room comparison dock"
         style={{ boxShadow: 'var(--shadow-float)' }}
-        className="dock-spring-enter fixed bottom-5 left-1/2 z-40 w-[calc(100%-2rem)] max-w-2xl bg-[var(--bg-surface)] border border-[var(--border-stone)] rounded-[18px] px-4 py-3"
+        className="dock-spring-enter fixed bottom-5 left-1/2 z-40 w-[calc(100%-2rem)] max-w-3xl bg-[var(--bg-surface)] border border-[var(--border-stone)] rounded-[18px] px-4 py-3"
       >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           {/* Selected Thumbnails + Empty Slots */}

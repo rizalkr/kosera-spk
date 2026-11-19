@@ -20,53 +20,60 @@ export const SearchModeToggle = ({
   className = '',
 }: SearchModeToggleProps) => {
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
-      <span className="text-sm text-gray-600">Mode:</span>
-      <div className="flex rounded-lg bg-gray-100 p-1">
+    <div className={`flex items-center gap-2.5 ${className}`}>
+      <span className="text-xs font-semibold text-[var(--ink-secondary)]">
+        Mode:
+      </span>
+      <div
+        role="tablist"
+        aria-label="Mode pencarian"
+        className="inline-flex rounded-[12px] bg-[var(--bg-surface)] border border-[var(--border-stone)] p-1"
+      >
         <button
           type="button"
+          role="tab"
+          aria-selected={mode === 'text'}
           onClick={() => onChange('text')}
-          className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+          className={`px-3 py-1.5 rounded-[8px] text-xs font-semibold transition-colors cursor-pointer ${
             mode === 'text'
-              ? 'bg-white text-gray-800 shadow-sm'
-              : 'text-gray-500 hover:text-gray-700'
+              ? 'bg-[var(--ink-primary)] text-white'
+              : 'text-[var(--ink-secondary)] hover:text-[var(--ink-primary)]'
           }`}
         >
-          Teks
+          Filter Teks
         </button>
         <button
           type="button"
+          role="tab"
+          aria-selected={mode === 'ai'}
           onClick={() => isAIOnline && onChange('ai')}
           disabled={!isAIOnline}
-          className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-1.5 ${
+          className={`px-3 py-1.5 rounded-[8px] text-xs font-semibold transition-colors inline-flex items-center gap-1.5 cursor-pointer ${
             mode === 'ai'
-              ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-sm'
+              ? 'bg-[var(--accent-primary)] text-white'
               : isAIOnline
-              ? 'text-gray-500 hover:text-gray-700'
-              : 'text-gray-300 cursor-not-allowed'
+                ? 'text-[var(--ink-secondary)] hover:text-[var(--ink-primary)]'
+                : 'text-[var(--ink-secondary)]/45 cursor-not-allowed'
           }`}
         >
           <svg
-            className="w-4 h-4"
+            className="w-3.5 h-3.5"
             fill="none"
             stroke="currentColor"
+            strokeWidth={1.75}
+            strokeLinecap="round"
+            strokeLinejoin="round"
             viewBox="0 0 24 24"
+            aria-hidden="true"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-            />
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
           </svg>
-          AI
-          {!isAIOnline && (
-            <span className="text-xs">(offline)</span>
-          )}
+          <span>Pencarian AI</span>
+          {!isAIOnline && <span className="text-[11px]">(offline)</span>}
         </button>
       </div>
       {mode === 'ai' && isAIOnline && (
-        <span className="text-xs text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">
+        <span className="text-xs font-medium text-[var(--accent-primary)] bg-[var(--accent-tint)] border border-[var(--accent-primary)]/20 px-2.5 py-1 rounded-full">
           Semantic Search
         </span>
       )}
@@ -75,7 +82,7 @@ export const SearchModeToggle = ({
 };
 
 /**
- * AIBadge - Badge to show AI-powered results
+ * AIBadge - Badge to show AI-powered results in Warm Tactile Tech palette
  */
 interface AIBadgeProps {
   similarity?: number;
@@ -83,26 +90,33 @@ interface AIBadgeProps {
 }
 
 export const AIBadge = ({ similarity, className = '' }: AIBadgeProps) => {
-  const similarityPercent = similarity ? Math.round(similarity * 100) : null;
+  const similarityPercent =
+    typeof similarity === 'number'
+      ? Math.round(similarity <= 1 ? similarity * 100 : similarity)
+      : null;
 
   return (
-    <div className={`flex items-center gap-1 ${className}`}>
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gradient-to-r from-purple-500 to-blue-500 text-white">
-        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-          />
+    <div className={`inline-flex items-center gap-1.5 ${className}`}>
+      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-[var(--accent-tint)] text-[var(--accent-primary)] border border-[var(--accent-primary)]/25">
+        <svg
+          className="w-3.5 h-3.5"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1.75}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
         </svg>
-        AI
+        <span>AI Match</span>
+        {similarityPercent !== null && (
+          <span className="font-mono-tabular font-bold">
+            {similarityPercent}%
+          </span>
+        )}
       </span>
-      {similarityPercent !== null && (
-        <span className="text-xs text-purple-600 font-medium">
-          {similarityPercent}% relevan
-        </span>
-      )}
     </div>
   );
 };

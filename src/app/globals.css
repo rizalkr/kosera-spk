@@ -224,3 +224,63 @@ body {
     opacity: 1 !important;
   }
 }
+
+/* Leaflet Price-Pill Markers & Warm Popups */
+.kosera-leaflet-map .leaflet-tile-pane {
+  filter: saturate(0.78) sepia(0.06) brightness(1.02);
+}
+
+.kosera-price-pin-wrapper {
+  background: transparent;
+  border: none;
+}
+
+.kosera-price-pin {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-pill);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-stone);
+  color: var(--ink-primary);
+  font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px -4px rgba(24, 26, 24, 0.18);
+  transition:
+    transform 260ms var(--ease-spring),
+    background-color 180ms ease,
+    color 180ms ease,
+    border-color 180ms ease;
+}
+
+.kosera-price-pin.is-top {
+  background: var(--accent-spark);
+  border-color: var(--accent-spark);
+  color: #FFFFFF;
+}
+
+.kosera-price-pin:hover,
+.kosera-price-pin.is-active {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: #FFFFFF;
+  transform: scale(1.1);
+}
+
+.kosera-map-popup .leaflet-popup-content-wrapper {
+  border-radius: 14px;
+  border: 1px solid var(--border-stone);
+  box-shadow: var(--shadow-float);
+  background: var(--bg-surface);
+  color: var(--ink-primary);
+  padding: 2px;
+}
+
+.kosera-map-popup .leaflet-popup-tip {
+  background: var(--bg-surface);
+}
+
