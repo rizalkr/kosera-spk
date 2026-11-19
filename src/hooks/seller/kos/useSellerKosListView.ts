@@ -32,8 +32,15 @@ export const useSellerKosListView = (): UseSellerKosListViewResult => {
   const { data: kosResponse, isLoading, error, refetch } = useMyKos();
 
   const kosList = useMemo(() => {
-    if (!kosResponse?.data) return [] as SellerKosListItem[];
-    try { return kosListSchema.parse(kosResponse.data); } catch { return kosResponse.data as SellerKosListItem[]; }
+    const raw = kosResponse?.data as unknown;
+    const rawList = Array.isArray(raw)
+      ? raw
+      : raw && typeof raw === 'object' && 'kos' in raw && Array.isArray((raw as { kos: unknown }).kos)
+        ? (raw as { kos: unknown[] }).kos
+        : [];
+
+    const parsed = kosListSchema.safeParse(rawList);
+    return parsed.success ? parsed.data : (rawList as SellerKosListItem[]);
   }, [kosResponse]);
 
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -44,14 +51,31 @@ export const useSellerKosListView = (): UseSellerKosListViewResult => {
     setIsRefreshing(false);
   }, [refetch]);
 
-  const formatPrice = useCallback((price: number | null | undefined) => !price ? 'Belum diatur' : `Rp ${price.toLocaleString('id-ID')}`, []);
+  const formatPrice = useCallback(
+    (price: number | null | undefined) =>
+      !price ? 'Belum diatur' : `Rp ${price.toLocaleString('id-ID')}`,
+    []
+  );
 
   const getKosStatus = useCallback((kos: SellerKosListItem) => {
     const isActive = (kos as SellerKosListItem & { isActive?: boolean }).isActive;
     const verified = (kos as SellerKosListItem & { verified?: boolean }).verified;
-    if (isActive === false) return { label: 'Tidak Aktif', color: 'bg-red-100 text-red-800' };
-    if (verified === false) return { label: 'Menunggu Verifikasi', color: 'bg-yellow-100 text-yellow-800' };
-    return { label: 'Aktif', color: 'bg-green-100 text-green-800' };
+    if (isActive === false) {
+      return {
+        label: 'Tidak Aktif',
+        color: 'bg-[var(--accent-danger-tint)] text-[var(--accent-danger)] border border-[#ECC6C0]',
+      };
+    }
+    if (verified === false) {
+      return {
+        label: 'Menunggu Verifikasi',
+        color: 'bg-[var(--accent-spark-tint)] text-[#9A471F] border border-[#F2CDBB]',
+      };
+    }
+    return {
+      label: 'Aktif',
+      color: 'bg-[var(--accent-tint)] text-[var(--accent-primary)] border border-[#BBDCD0]',
+    };
   }, []);
 
   const counts = useMemo(() => {
