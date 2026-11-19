@@ -39,6 +39,7 @@ import {
   parseToolCalls,
 } from '@/lib/ai/chat';
 import { POST as chatPost } from '@/app/api/chat/route';
+import { sanitizeStreamingMarkdown } from '@/components/features/chat/ChatMarkdown';
 
 function makeMockSSEResponse(frames: Array<{ event: string; data: unknown }>): Response {
   const payload = frames.map((f) => formatSSE(f.event, f.data)).join('');
@@ -92,6 +93,14 @@ describe('AI Chat Helpers', () => {
         'K. Mandi Dalam',
       ]);
       expect(parseFacilitiesList(null)).toEqual([]);
+    });
+  });
+
+  describe('sanitizeStreamingMarkdown', () => {
+    it('strips dangling unclosed bold asterisks during live streaming only', () => {
+      expect(sanitizeStreamingMarkdown('1. **Kost Rahayu**', true)).toBe('1. **Kost Rahayu**');
+      expect(sanitizeStreamingMarkdown('1. **', true)).toBe('1. ');
+      expect(sanitizeStreamingMarkdown('1. **', false)).toBe('1. **');
     });
   });
 

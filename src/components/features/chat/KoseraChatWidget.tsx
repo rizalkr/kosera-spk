@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -11,9 +11,11 @@ import {
   type ChatKosCard,
   type LLMHealthResponse,
 } from '@/lib/ai/chat-types';
+import ChatMarkdown from './ChatMarkdown';
 
 const EXCLUDED_PREFIXES = ['/design-playground', '/admin', '/seller', '/auth'];
 const FALLBACK_ROOM_IMAGE = '/images/rooms/room1.jpg';
+const AUTO_SCROLL_THRESHOLD_PX = 48;
 
 const STARTER_PROMPTS = [
   'Carikan kos putri di Sleman budget maksimal 1,5 juta ada AC dan WiFi',
@@ -33,6 +35,115 @@ function formatRupiah(amount: number): string {
   return `Rp ${amount.toLocaleString('id-ID')}`;
 }
 
+function normalizeSpkScore(score: number): number {
+  const pct = score <= 5 ? (score / 5) * 100 : score;
+  return Math.max(0, Math.min(100, Math.round(pct)));
+}
+
+interface ChatMessageRowProps {
+  msg: UiChatMessage;
+  isActiveStreaming: boolean;
+  failedImages: Record<number, boolean>;
+  onImageError: (kosId: number) => void;
+}
+
+const ChatMessageRow = React.memo(function ChatMessageRow({
+  msg,
+  isActiveStreaming,
+  failedImages,
+  onImageError,
+}: ChatMessageRowProps) {
+  const isUser = msg.role === 'user';
+
+  return (
+    <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
+      <div
+        className={`max-w-[90%] rounded-[14px] px-3.5 py-2.5 text-xs leading-relaxed break-words ${
+          isUser
+            ? 'bg-[var(--accent-primary)] text-white whitespace-pre-wrap'
+            : msg.error
+              ? 'bg-rose-50 text-rose-800 border border-rose-200 whitespace-pre-wrap'
+              : 'bg-[var(--bg-canvas)] text-[var(--ink-primary)] border border-[var(--border-stone)]'
+        }`}
+      >
+        {isUser || msg.error ? (
+          msg.content
+        ) : msg.content ? (
+          <ChatMarkdown content={msg.content} isStreaming={isActiveStreaming} />
+        ) : isActiveStreaming ? (
+          <div className="flex items-center gap-1.5 py-0.5 text-[var(--ink-secondary)]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)] animate-bounce [animation-delay:-0.2s]" />
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)] animate-bounce [animation-delay:-0.1s]" />
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)] animate-bounce" />
+          </div>
+        ) : null}
+      </div>
+
+      {/* Clickable Kos Cards from live PostgreSQL tool results */}
+      {!isUser && msg.cards && msg.cards.length > 0 && (
+        <div className="w-full mt-2 space-y-2">
+          {msg.cards.map((card) => {
+            const imgSrc =
+              failedImages[card.kosId] || !card.imageUrl
+                ? FALLBACK_ROOM_IMAGE
+                : card.imageUrl;
+            return (
+              <Link
+                key={card.kosId}
+                href={`/kos/${card.kosId}/view`}
+                className="flex gap-3 p-2.5 rounded-[12px] bg-[var(--bg-canvas)] border border-[var(--border-stone)] hover:border-[var(--accent-primary)] transition-colors duration-150"
+              >
+                <div className="relative w-16 h-16 rounded-[8px] overflow-hidden shrink-0 bg-[var(--bg-muted)]">
+                  <Image
+                    src={imgSrc}
+                    alt={card.title}
+                    fill
+                    sizes="64px"
+                    className="object-cover"
+                    onError={() => onImageError(card.kosId)}
+                  />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="text-xs font-semibold text-[var(--ink-primary)] line-clamp-1">
+                      {card.rank ? `#${card.rank} ` : ''}
+                      {card.title}
+                    </h3>
+                    {typeof card.hybridScore === 'number' ? (
+                      <span className="shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-[var(--accent-tint)] text-[var(--accent-primary)]">
+                        SPK {normalizeSpkScore(card.hybridScore)}%
+                      </span>
+                    ) : typeof card.similarityScore === 'number' &&
+                      card.similarityScore > 0 ? (
+                      <span className="shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-[var(--accent-tint)] text-[var(--accent-primary)]">
+                        {Math.round(card.similarityScore * 100)}% cocok
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="text-[11px] text-[var(--ink-secondary)] truncate mt-0.5">
+                    {[card.subdistrict, card.city].filter(Boolean).join(', ')}
+                    {card.gender ? ` · ${card.gender}` : ''}
+                  </p>
+                  <div className="flex items-center justify-between gap-2 mt-1.5">
+                    <span className="font-mono-tabular text-xs font-bold text-[var(--accent-primary)]">
+                      {formatRupiah(card.priceMonthly)}/bln
+                    </span>
+                    <span className="text-[10px] text-[var(--ink-secondary)]">
+                      {card.availableRooms > 0
+                        ? `${card.availableRooms} kamar kosong`
+                        : 'Penuh'}
+                    </span>
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+});
+
 export default function KoseraChatWidget() {
   const pathname = usePathname();
   const { token, isAuthenticated } = useAuth();
@@ -42,16 +153,54 @@ export default function KoseraChatWidget() {
   const [messages, setMessages] = useState<UiChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
+  const [activeStreamMsgId, setActiveStreamMsgId] = useState<string | null>(null);
   const [statusText, setStatusText] = useState<string | null>(null);
   const [llmStatus, setLlmStatus] = useState<LLMHealthResponse['status'] | 'checking'>('checking');
   const [failedImages, setFailedImages] = useState<Record<number, boolean>>({});
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
 
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const isAutoScrollEnabledRef = useRef(true);
+  const pendingDeltaRef = useRef('');
+  const rafIdRef = useRef<number | null>(null);
 
   const isExcludedRoute = EXCLUDED_PREFIXES.some((prefix) =>
     pathname?.startsWith(prefix)
   );
+
+  const handleImageError = useCallback((kosId: number) => {
+    setFailedImages((prev) => (prev[kosId] ? prev : { ...prev, [kosId]: true }));
+  }, []);
+
+  const scrollToBottom = useCallback((smooth = false) => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    if (smooth) {
+      el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+    } else {
+      el.scrollTop = el.scrollHeight;
+    }
+  }, []);
+
+  const handleContainerScroll = useCallback(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    const nearBottom = distanceFromBottom <= AUTO_SCROLL_THRESHOLD_PX;
+    isAutoScrollEnabledRef.current = nearBottom;
+    setShowScrollToBottom((prev) => (prev === !nearBottom ? prev : !nearBottom));
+  }, []);
+
+  const handleUserScrollIntent = useCallback(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    if (distanceFromBottom > 8) {
+      isAutoScrollEnabledRef.current = false;
+      setShowScrollToBottom(true);
+    }
+  }, []);
 
   const fetchLlmHealth = useCallback(async () => {
     try {
@@ -75,26 +224,75 @@ export default function KoseraChatWidget() {
   useEffect(() => {
     if (isOpen) {
       fetchLlmHealth();
+      if (isAutoScrollEnabledRef.current) {
+        requestAnimationFrame(() => scrollToBottom(false));
+      }
     }
-  }, [isOpen, fetchLlmHealth]);
+  }, [isOpen, fetchLlmHealth, scrollToBottom]);
 
+  // Only auto-scroll when the user has NOT scrolled up to read earlier messages
   useEffect(() => {
-    const el = scrollContainerRef.current;
-    if (!el) return;
-    el.scrollTop = el.scrollHeight;
-  }, [messages, statusText, isOpen]);
+    if (!isOpen || !isAutoScrollEnabledRef.current) return;
+    const id = requestAnimationFrame(() => {
+      if (isAutoScrollEnabledRef.current) {
+        scrollToBottom(false);
+      }
+    });
+    return () => cancelAnimationFrame(id);
+  }, [messages, statusText, isOpen, scrollToBottom]);
 
   useEffect(() => {
     return () => {
       abortControllerRef.current?.abort();
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
+      }
     };
   }, []);
 
-  const handleResetChat = () => {
+  const flushPendingTokens = useCallback((assistantMsgId: string) => {
+    rafIdRef.current = null;
+    const buffered = pendingDeltaRef.current;
+    if (!buffered) return;
+    pendingDeltaRef.current = '';
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === assistantMsgId ? { ...m, content: m.content + buffered } : m
+      )
+    );
+  }, []);
+
+  const queueTokenDelta = useCallback(
+    (assistantMsgId: string, delta: string) => {
+      pendingDeltaRef.current += delta;
+      if (rafIdRef.current === null) {
+        rafIdRef.current = requestAnimationFrame(() =>
+          flushPendingTokens(assistantMsgId)
+        );
+      }
+    },
+    [flushPendingTokens]
+  );
+
+  const handleStopStreaming = () => {
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
+    if (rafIdRef.current !== null) {
+      cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = null;
+    }
+    if (activeStreamMsgId && pendingDeltaRef.current) {
+      flushPendingTokens(activeStreamMsgId);
+    }
     setIsStreaming(false);
+    setActiveStreamMsgId(null);
     setStatusText(null);
+  };
+
+  const handleResetChat = () => {
+    handleStopStreaming();
+    isAutoScrollEnabledRef.current = true;
+    setShowScrollToBottom(false);
     setMessages([]);
   };
 
@@ -120,9 +318,15 @@ export default function KoseraChatWidget() {
       .slice(-16)
       .map((m) => ({ role: m.role, content: m.content }));
 
+    // Re-enable auto-scroll when the user sends a fresh prompt
+    isAutoScrollEnabledRef.current = true;
+    setShowScrollToBottom(false);
+    pendingDeltaRef.current = '';
+
     setMessages((prev) => [...prev, userMsg, placeholderAssistant]);
     setInputValue('');
     setIsStreaming(true);
+    setActiveStreamMsgId(assistantMsgId);
     setStatusText('Menghubungkan ke asisten AI Kosera...');
 
     const controller = new AbortController();
@@ -207,33 +411,40 @@ export default function KoseraChatWidget() {
               })
             );
           } else if (evt.event === 'token' && typeof payload.delta === 'string') {
-            setStatusText(null);
-            const delta = payload.delta;
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.id === assistantMsgId
-                  ? { ...m, content: m.content + delta }
-                  : m
-              )
-            );
+            setStatusText((prev) => (prev === null ? prev : null));
+            queueTokenDelta(assistantMsgId, payload.delta);
           } else if (evt.event === 'done') {
+            if (rafIdRef.current !== null) {
+              cancelAnimationFrame(rafIdRef.current);
+              rafIdRef.current = null;
+            }
+            const leftover = pendingDeltaRef.current;
+            pendingDeltaRef.current = '';
             setStatusText(null);
+
             const finalContent =
               typeof payload.content === 'string' ? payload.content : undefined;
             const finalCards = Array.isArray(payload.cards)
               ? (payload.cards as ChatKosCard[])
               : undefined;
+
             setMessages((prev) =>
               prev.map((m) => {
                 if (m.id !== assistantMsgId) return m;
+                const combined = m.content + leftover;
                 return {
                   ...m,
-                  content: m.content || finalContent || 'Maaf, belum ada respons dari asisten.',
+                  content: combined || finalContent || 'Maaf, belum ada respons dari asisten.',
                   cards: finalCards && finalCards.length > 0 ? finalCards : m.cards,
                 };
               })
             );
           } else if (evt.event === 'error') {
+            if (rafIdRef.current !== null) {
+              cancelAnimationFrame(rafIdRef.current);
+              rafIdRef.current = null;
+            }
+            pendingDeltaRef.current = '';
             const detail =
               typeof payload.detail === 'string'
                 ? payload.detail
@@ -267,7 +478,15 @@ export default function KoseraChatWidget() {
         )
       );
     } finally {
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = null;
+      }
+      if (pendingDeltaRef.current) {
+        flushPendingTokens(assistantMsgId);
+      }
       setIsStreaming(false);
+      setActiveStreamMsgId(null);
       setStatusText(null);
       abortControllerRef.current = null;
     }
@@ -294,69 +513,78 @@ export default function KoseraChatWidget() {
 
   return (
     <div className={`fixed right-5 ${bottomOffsetClass} z-40 flex flex-col items-end`}>
-      {isOpen && (
-        <section
-          role="dialog"
-          aria-label="Asisten AI Kosera SPK"
-          style={{ boxShadow: 'var(--shadow-float)' }}
-          className="mb-3 w-[calc(100vw-2.5rem)] sm:w-[420px] h-[min(600px,78vh)] flex flex-col rounded-[20px] bg-[var(--bg-surface)] border border-[var(--border-stone)] overflow-hidden"
-        >
-          {/* Header */}
-          <header className="flex items-center justify-between gap-3 px-4 py-3.5 border-b border-[var(--border-stone)] bg-[var(--bg-canvas)]">
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h2 className="text-sm font-bold text-[var(--ink-primary)] truncate">
-                  Asisten AI Kosera SPK
-                </h2>
-                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-[var(--bg-surface)] border border-[var(--border-stone)] text-[var(--ink-secondary)]">
-                  <span className={`w-1.5 h-1.5 rounded-full ${statusBadge.dot}`} />
-                  {statusBadge.label}
-                </span>
-              </div>
-              <p className="text-[11px] text-[var(--ink-secondary)] mt-0.5 truncate">
-                {isAuthenticated
-                  ? 'Mode Personalisasi SPK Hybrid aktif'
-                  : 'Pencarian Semantik + SPK Hybrid Kosera'}
-              </p>
+      {/* Chat Drawer with smooth open/close transition */}
+      <section
+        role="dialog"
+        aria-label="Asisten AI Kosera SPK"
+        aria-hidden={!isOpen}
+        style={{ boxShadow: 'var(--shadow-float)' }}
+        className={`absolute bottom-14 right-0 w-[calc(100vw-2.5rem)] sm:w-[430px] h-[min(620px,78vh)] flex flex-col rounded-[20px] bg-[var(--bg-surface)] border border-[var(--border-stone)] overflow-hidden origin-bottom-right transition-all duration-200 ease-out will-change-transform ${
+          isOpen
+            ? 'opacity-100 scale-100 translate-y-0 pointer-events-auto visible'
+            : 'opacity-0 scale-95 translate-y-2 pointer-events-none invisible'
+        }`}
+      >
+        {/* Header */}
+        <header className="flex items-center justify-between gap-3 px-4 py-3.5 border-b border-[var(--border-stone)] bg-[var(--bg-canvas)] shrink-0">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-bold text-[var(--ink-primary)] truncate">
+                Asisten AI Kosera SPK
+              </h2>
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-[var(--bg-surface)] border border-[var(--border-stone)] text-[var(--ink-secondary)]">
+                <span className={`w-1.5 h-1.5 rounded-full ${statusBadge.dot}`} />
+                {statusBadge.label}
+              </span>
             </div>
-            <div className="flex items-center gap-1 shrink-0">
-              {messages.length > 0 && (
-                <button
-                  type="button"
-                  onClick={handleResetChat}
-                  title="Mulai percakapan baru"
-                  className="px-2 py-1 rounded-[8px] text-[11px] font-medium text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] hover:bg-[var(--bg-muted)] transition-colors cursor-pointer"
-                >
-                  Reset
-                </button>
-              )}
+            <p className="text-[11px] text-[var(--ink-secondary)] mt-0.5 truncate">
+              {isAuthenticated
+                ? 'Mode Personalisasi SPK Hybrid aktif'
+                : 'Pencarian Semantik + SPK Hybrid Kosera'}
+            </p>
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            {messages.length > 0 && (
               <button
                 type="button"
-                onClick={() => setIsOpen(false)}
-                aria-label="Tutup asisten chat"
-                className="w-8 h-8 rounded-[10px] flex items-center justify-center text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] hover:bg-[var(--bg-muted)] transition-colors cursor-pointer"
+                onClick={handleResetChat}
+                title="Mulai percakapan baru"
+                className="px-2 py-1 rounded-[8px] text-[11px] font-medium text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] hover:bg-[var(--bg-muted)] transition-colors cursor-pointer"
               >
-                <svg
-                  className="w-4 h-4"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={1.75}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M18 6 6 18" />
-                  <path d="m6 6 12 12" />
-                </svg>
+                Reset
               </button>
-            </div>
-          </header>
+            )}
+            <button
+              type="button"
+              onClick={() => setIsOpen(false)}
+              aria-label="Tutup asisten chat"
+              className="w-8 h-8 rounded-[10px] flex items-center justify-center text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] hover:bg-[var(--bg-muted)] transition-colors cursor-pointer"
+            >
+              <svg
+                className="w-4 h-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.75}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M18 6 6 18" />
+                <path d="m6 6 12 12" />
+              </svg>
+            </button>
+          </div>
+        </header>
 
-          {/* Message List */}
+        {/* Scrollable Message Area (never hijacks user scroll) */}
+        <div className="relative flex-1 min-h-0">
           <div
             ref={scrollContainerRef}
-            className="flex-1 overflow-y-auto p-4 space-y-4 bg-[var(--bg-surface)]"
+            onScroll={handleContainerScroll}
+            onWheel={handleUserScrollIntent}
+            onTouchMove={handleUserScrollIntent}
+            className="h-full overflow-y-auto overscroll-contain p-4 space-y-4 bg-[var(--bg-surface)]"
           >
             {messages.length === 0 ? (
               <div className="space-y-4">
@@ -387,91 +615,13 @@ export default function KoseraChatWidget() {
               </div>
             ) : (
               messages.map((msg) => (
-                <div
+                <ChatMessageRow
                   key={msg.id}
-                  className={`flex flex-col ${
-                    msg.role === 'user' ? 'items-end' : 'items-start'
-                  }`}
-                >
-                  <div
-                    className={`max-w-[88%] rounded-[14px] px-3.5 py-2.5 text-xs leading-relaxed whitespace-pre-wrap break-words ${
-                      msg.role === 'user'
-                        ? 'bg-[var(--accent-primary)] text-white'
-                        : msg.error
-                          ? 'bg-rose-50 text-rose-800 border border-rose-200'
-                          : 'bg-[var(--bg-canvas)] text-[var(--ink-primary)] border border-[var(--border-stone)]'
-                    }`}
-                  >
-                    {msg.content || (isStreaming ? '...' : '')}
-                  </div>
-
-                  {/* Clickable Kos Cards from live PostgreSQL tool results */}
-                  {msg.role === 'assistant' && msg.cards && msg.cards.length > 0 && (
-                    <div className="w-full mt-2 space-y-2">
-                      {msg.cards.map((card) => {
-                        const imgSrc =
-                          failedImages[card.kosId] || !card.imageUrl
-                            ? FALLBACK_ROOM_IMAGE
-                            : card.imageUrl;
-                        return (
-                          <Link
-                            key={card.kosId}
-                            href={`/kos/${card.kosId}/view`}
-                            className="flex gap-3 p-2.5 rounded-[12px] bg-[var(--bg-canvas)] border border-[var(--border-stone)] hover:border-[var(--accent-primary)] transition-colors"
-                          >
-                            <div className="relative w-16 h-16 rounded-[8px] overflow-hidden shrink-0 bg-[var(--bg-muted)]">
-                              <Image
-                                src={imgSrc}
-                                alt={card.title}
-                                fill
-                                sizes="64px"
-                                className="object-cover"
-                                onError={() =>
-                                  setFailedImages((prev) => ({
-                                    ...prev,
-                                    [card.kosId]: true,
-                                  }))
-                                }
-                              />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-start justify-between gap-2">
-                                <h3 className="text-xs font-semibold text-[var(--ink-primary)] line-clamp-1">
-                                  {card.rank ? `#${card.rank} ` : ''}
-                                  {card.title}
-                                </h3>
-                                {typeof card.hybridScore === 'number' ? (
-                                  <span className="shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-[var(--accent-tint)] text-[var(--accent-primary)]">
-                                    SPK {Math.round(card.hybridScore)}
-                                  </span>
-                                ) : typeof card.similarityScore === 'number' &&
-                                  card.similarityScore > 0 ? (
-                                  <span className="shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-[var(--accent-tint)] text-[var(--accent-primary)]">
-                                    {Math.round(card.similarityScore * 100)}% cocok
-                                  </span>
-                                ) : null}
-                              </div>
-                              <p className="text-[11px] text-[var(--ink-secondary)] truncate mt-0.5">
-                                {[card.subdistrict, card.city].filter(Boolean).join(', ')}
-                                {card.gender ? ` · ${card.gender}` : ''}
-                              </p>
-                              <div className="flex items-center justify-between gap-2 mt-1.5">
-                                <span className="font-mono-tabular text-xs font-bold text-[var(--accent-primary)]">
-                                  {formatRupiah(card.priceMonthly)}/bln
-                                </span>
-                                <span className="text-[10px] text-[var(--ink-secondary)]">
-                                  {card.availableRooms > 0
-                                    ? `${card.availableRooms} kamar kosong`
-                                    : 'Penuh'}
-                                </span>
-                              </div>
-                            </div>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
+                  msg={msg}
+                  isActiveStreaming={isStreaming && msg.id === activeStreamMsgId}
+                  failedImages={failedImages}
+                  onImageError={handleImageError}
+                />
               ))
             )}
 
@@ -483,33 +633,72 @@ export default function KoseraChatWidget() {
             )}
           </div>
 
-          {/* Input Composer */}
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSendMessage();
-            }}
-            className="p-3 border-t border-[var(--border-stone)] bg-[var(--bg-canvas)] flex items-center gap-2"
-          >
-            <input
-              type="text"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              disabled={isStreaming}
-              placeholder="Tanya kos, budget, lokasi, atau SPK..."
-              className="flex-1 text-xs px-3 py-2.5 rounded-[10px] bg-[var(--bg-surface)] border border-[var(--border-stone)] text-[var(--ink-primary)] placeholder:text-[var(--ink-secondary)]/70 focus:outline-none focus:border-[var(--accent-primary)] disabled:opacity-60"
-            />
+          {/* Floating Scroll-to-Bottom Pill when user scrolls up */}
+          {showScrollToBottom && messages.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                isAutoScrollEnabledRef.current = true;
+                setShowScrollToBottom(false);
+                scrollToBottom(true);
+              }}
+              aria-label="Gulir ke pesan terbaru"
+              className="absolute bottom-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium bg-[var(--bg-surface)]/95 backdrop-blur border border-[var(--border-stone)] text-[var(--ink-primary)] shadow-md hover:border-[var(--accent-primary)] transition-all cursor-pointer"
+            >
+              <svg
+                className="w-3 h-3"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+              <span>Ke bawah</span>
+            </button>
+          )}
+        </div>
+
+        {/* Input Composer */}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSendMessage();
+          }}
+          className="p-3 border-t border-[var(--border-stone)] bg-[var(--bg-canvas)] flex items-center gap-2 shrink-0"
+        >
+          <input
+            type="text"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            disabled={isStreaming}
+            placeholder="Tanya kos, budget, lokasi, atau SPK..."
+            className="flex-1 text-xs px-3 py-2.5 rounded-[10px] bg-[var(--bg-surface)] border border-[var(--border-stone)] text-[var(--ink-primary)] placeholder:text-[var(--ink-secondary)]/70 focus:outline-none focus:border-[var(--accent-primary)] disabled:opacity-60 transition-colors"
+          />
+          {isStreaming ? (
+            <button
+              type="button"
+              onClick={handleStopStreaming}
+              aria-label="Hentikan respons"
+              className="px-3.5 py-2.5 rounded-[10px] text-xs font-semibold bg-[var(--bg-muted)] text-[var(--ink-primary)] border border-[var(--border-stone)] hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 transition-colors cursor-pointer"
+            >
+              Stop
+            </button>
+          ) : (
             <button
               type="submit"
-              disabled={isStreaming || inputValue.trim().length === 0}
+              disabled={inputValue.trim().length === 0}
               aria-label="Kirim pesan"
               className="px-3.5 py-2.5 rounded-[10px] text-xs font-semibold bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-primary-hover)] disabled:opacity-45 disabled:cursor-not-allowed transition-colors cursor-pointer"
             >
               Kirim
             </button>
-          </form>
-        </section>
-      )}
+          )}
+        </form>
+      </section>
 
       {/* Floating Launcher Button */}
       <button
@@ -518,7 +707,7 @@ export default function KoseraChatWidget() {
         aria-expanded={isOpen}
         aria-label={isOpen ? 'Tutup asisten AI Kosera' : 'Buka asisten AI Kosera'}
         style={{ boxShadow: 'var(--shadow-float)' }}
-        className="flex items-center gap-2.5 px-4 py-3 rounded-full bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-primary-hover)] transition-colors cursor-pointer"
+        className="flex items-center gap-2.5 px-4 py-3 rounded-full bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-primary-hover)] active:scale-[0.98] transition-all duration-150 cursor-pointer"
       >
         <svg
           className="w-4 h-4 shrink-0"
