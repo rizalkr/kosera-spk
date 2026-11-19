@@ -57,11 +57,11 @@ import {
   parseToolCalls,
 } from '@/lib/ai/chat';
 import { POST as chatPost } from '@/app/api/chat/route';
+import { POST as feedbackPost } from '@/app/api/chat/feedback/route';
 import {
-  POST as feedbackPost,
   computeAnonymizedSessionHash,
   resetFeedbackRateLimiter,
-} from '@/app/api/chat/feedback/route';
+} from '@/lib/ai/chat-feedback';
 import { sanitizeStreamingMarkdown } from '@/components/features/chat/ChatMarkdown';
 
 function makeMockSSEResponse(frames: Array<{ event: string; data: unknown }>): Response {
