@@ -10,8 +10,17 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-const mockSemanticSearch = vi.fn();
-const mockGetHybridRecommendations = vi.fn();
+const {
+  mockSemanticSearch,
+  mockGetHybridRecommendations,
+  mockInsertValues,
+  mockInsertReturning,
+} = vi.hoisted(() => ({
+  mockSemanticSearch: vi.fn(),
+  mockGetHybridRecommendations: vi.fn(),
+  mockInsertValues: vi.fn(),
+  mockInsertReturning: vi.fn(),
+}));
 
 vi.mock('@/db', () => ({
   db: {
@@ -19,6 +28,14 @@ vi.mock('@/db', () => ({
       from: () => ({
         where: vi.fn().mockResolvedValue([]),
       }),
+    }),
+    insert: () => ({
+      values: (vals: unknown) => {
+        mockInsertValues(vals);
+        return {
+          returning: () => mockInsertReturning(),
+        };
+      },
     }),
   },
 }));
@@ -34,15 +51,40 @@ vi.mock('@/lib/ai/hybrid', () => ({
 import {
   executeChatTool,
   formatSSE,
+  getLLMProvider,
   parseFacilitiesList,
   parseSSEFrames,
   parseToolCalls,
 } from '@/lib/ai/chat';
 import { POST as chatPost } from '@/app/api/chat/route';
+import {
+  POST as feedbackPost,
+  computeAnonymizedSessionHash,
+  resetFeedbackRateLimiter,
+} from '@/app/api/chat/feedback/route';
 import { sanitizeStreamingMarkdown } from '@/components/features/chat/ChatMarkdown';
 
 function makeMockSSEResponse(frames: Array<{ event: string; data: unknown }>): Response {
   const payload = frames.map((f) => formatSSE(f.event, f.data)).join('');
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(encoder.encode(payload));
+      controller.close();
+    },
+  });
+  return new Response(stream, {
+    status: 200,
+    headers: { 'Content-Type': 'text/event-stream' },
+  });
+}
+
+function makeMockOpenAISSEResponse(chunks: Array<Record<string, unknown> | '[DONE]'>): Response {
+  const payload = chunks
+    .map((chunk) =>
+      chunk === '[DONE]' ? 'data: [DONE]\n\n' : `data: ${JSON.stringify(chunk)}\n\n`
+    )
+    .join('');
   const encoder = new TextEncoder();
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
@@ -253,11 +295,15 @@ describe('AI Chat Helpers', () => {
 describe('POST /api/chat route', () => {
   const originalUrl = process.env.LLM_SERVICE_URL;
   const originalKey = process.env.LLM_API_KEY;
+  const originalProvider = process.env.LLM_PROVIDER;
+  const originalModelName = process.env.LLM_MODEL_NAME;
   const originalFetch = global.fetch;
 
   beforeEach(() => {
     mockSemanticSearch.mockReset();
     mockGetHybridRecommendations.mockReset();
+    delete process.env.LLM_PROVIDER;
+    delete process.env.LLM_MODEL_NAME;
   });
 
   afterEach(() => {
@@ -266,6 +312,12 @@ describe('POST /api/chat route', () => {
 
     if (originalKey === undefined) delete process.env.LLM_API_KEY;
     else process.env.LLM_API_KEY = originalKey;
+
+    if (originalProvider === undefined) delete process.env.LLM_PROVIDER;
+    else process.env.LLM_PROVIDER = originalProvider;
+
+    if (originalModelName === undefined) delete process.env.LLM_MODEL_NAME;
+    else process.env.LLM_MODEL_NAME = originalModelName;
 
     global.fetch = originalFetch;
   });
@@ -398,5 +450,297 @@ describe('POST /api/chat route', () => {
     expect(doneData.cards[0].kosId).toBe(55);
     expect(doneData.toolsUsed).toEqual(['semanticSearch']);
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('supports LLM_PROVIDER=openai-compatible (vLLM / Ollama) with identical SSE output contract', async () => {
+    process.env.LLM_PROVIDER = 'openai-compatible';
+    process.env.LLM_SERVICE_URL = 'http://localhost:11434';
+    process.env.LLM_MODEL_NAME = 'kosera-spk';
+
+    expect(getLLMProvider()).toBe('openai-compatible');
+
+    mockSemanticSearch.mockResolvedValueOnce({
+      query: 'kos putra surabaya',
+      searchType: 'semantic',
+      total: 1,
+      results: [
+        {
+          id: 88,
+          postId: 188,
+          name: 'Kost Putra Gubeng',
+          title: 'Kost Putra Gubeng',
+          city: 'Surabaya',
+          subdistrict: 'Gubeng',
+          gender: 'putra',
+          roomSize: '3x4',
+          facilities: 'WiFi, Parkir Motor',
+          price: 850000,
+          totalRooms: 10,
+          occupiedRooms: 8,
+          availableRooms: 2,
+          similarityScore: 0.89,
+        },
+      ],
+    });
+
+    const fetchMock = vi
+      .fn()
+      // Round 1: OpenAI-compatible streamed tool_calls delta chunks (e.g. vLLM hermes parser)
+      .mockResolvedValueOnce(
+        makeMockOpenAISSEResponse([
+          {
+            choices: [
+              {
+                delta: {
+                  tool_calls: [
+                    {
+                      index: 0,
+                      id: 'call_vllm_1',
+                      function: {
+                        name: 'semanticSearch',
+                        arguments: '{"query":"kos putra surabaya",',
+                      },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+          {
+            choices: [
+              {
+                delta: {
+                  tool_calls: [
+                    {
+                      index: 0,
+                      function: {
+                        arguments: '"city":"Surabaya","gender":"putra"}',
+                      },
+                    },
+                  ],
+                },
+                finish_reason: 'tool_calls',
+              },
+            ],
+          },
+          '[DONE]',
+        ])
+      )
+      // Round 2: OpenAI-compatible streamed text tokens
+      .mockResolvedValueOnce(
+        makeMockOpenAISSEResponse([
+          {
+            choices: [
+              {
+                delta: { content: 'Rekomendasi di Surabaya: ' },
+              },
+            ],
+          },
+          {
+            choices: [
+              {
+                delta: { content: 'Kost Putra Gubeng (Rp 850.000/bulan, 2 kamar kosong).' },
+                finish_reason: 'stop',
+              },
+            ],
+          },
+          '[DONE]',
+        ])
+      );
+
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const req = new Request('http://localhost:3000/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: [{ role: 'user', content: 'Cari kos putra di Surabaya' }],
+        stream: true,
+      }),
+    });
+
+    const resp = await chatPost(req);
+    expect(resp.status).toBe(200);
+
+    const rawText = await resp.text();
+    const { events } = parseSSEFrames(rawText);
+    const eventNames = events.map((e) => e.event);
+
+    expect(eventNames).toContain('status');
+    expect(eventNames).toContain('cards');
+    expect(eventNames).toContain('token');
+    expect(eventNames).toContain('done');
+
+    const doneEvent = events.find((e) => e.event === 'done');
+    const doneData = JSON.parse(doneEvent!.data) as {
+      content: string;
+      cards: Array<{ kosId: number }>;
+      toolsUsed: string[];
+    };
+    expect(doneData.content).toContain('Kost Putra Gubeng');
+    expect(doneData.cards[0].kosId).toBe(88);
+    expect(doneData.toolsUsed).toEqual(['semanticSearch']);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0][0]).toBe('http://localhost:11434/v1/chat/completions');
+  });
+
+  it('suppresses raw <tool_call> XML tokens when an OpenAI-compatible backend streams Qwen2.5 XML in delta.content', async () => {
+    process.env.LLM_PROVIDER = 'openai-compatible';
+    process.env.LLM_SERVICE_URL = 'http://localhost:11434';
+
+    mockSemanticSearch.mockResolvedValueOnce({
+      query: 'kos malang',
+      searchType: 'semantic',
+      total: 0,
+      results: [],
+    });
+
+    const fetchMock = vi
+      .fn()
+      // Round 1: Ollama raw <tool_call> XML inside delta.content
+      .mockResolvedValueOnce(
+        makeMockOpenAISSEResponse([
+          {
+            choices: [
+              {
+                delta: {
+                  content: '<tool_call>\n{"name": "semanticSearch", ',
+                },
+              },
+            ],
+          },
+          {
+            choices: [
+              {
+                delta: {
+                  content: '"arguments": {"query": "kos malang", "city": "Malang"}}\n</tool_call>',
+                },
+                finish_reason: 'stop',
+              },
+            ],
+          },
+          '[DONE]',
+        ])
+      )
+      // Round 2: Grounded empty answer
+      .mockResolvedValueOnce(
+        makeMockOpenAISSEResponse([
+          {
+            choices: [
+              {
+                delta: {
+                  content: 'Maaf, belum ditemukan kos di Malang yang sesuai.',
+                },
+                finish_reason: 'stop',
+              },
+            ],
+          },
+          '[DONE]',
+        ])
+      );
+
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const req = new Request('http://localhost:3000/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: [{ role: 'user', content: 'Cari kos di Malang' }],
+        stream: true,
+      }),
+    });
+
+    const resp = await chatPost(req);
+    const rawText = await resp.text();
+    const { events } = parseSSEFrames(rawText);
+
+    const tokenPayloads = events
+      .filter((e) => e.event === 'token')
+      .map((e) => (JSON.parse(e.data) as { delta: string }).delta)
+      .join('');
+
+    expect(tokenPayloads).not.toContain('<tool_call>');
+    expect(tokenPayloads).toContain('Maaf, belum ditemukan kos di Malang');
+  });
+});
+
+describe('POST /api/chat/feedback route (Phase 7.4)', () => {
+  beforeEach(() => {
+    resetFeedbackRateLimiter();
+    mockInsertValues.mockReset();
+    mockInsertReturning.mockReset();
+  });
+
+  it('computes a deterministic 64-char SHA-256 sessionHash without leaking raw identity', () => {
+    const req = new Request('http://localhost:3000/api/chat/feedback', {
+      method: 'POST',
+      headers: {
+        'x-forwarded-for': '203.0.113.10',
+        'user-agent': 'VitestBrowser/1.0',
+      },
+    });
+    const hashA = computeAnonymizedSessionHash(req, 'sess-12345');
+    const hashB = computeAnonymizedSessionHash(req, 'sess-12345');
+    const hashC = computeAnonymizedSessionHash(req, 'sess-99999');
+
+    expect(hashA).toMatch(/^[a-f0-9]{64}$/);
+    expect(hashA).toBe(hashB);
+    expect(hashA).not.toBe(hashC);
+    expect(hashA).not.toContain('sess-12345');
+  });
+
+  it('persists valid thumbs-down feedback with toolsUsed and returns 201', async () => {
+    mockInsertReturning.mockResolvedValueOnce([
+      { id: 101, rating: 'down', createdAt: new Date('2026-11-19T05:00:00Z') },
+    ]);
+
+    const req = new Request('http://localhost:3000/api/chat/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userPrompt: 'Carikan kos putri di Sleman budget 1 juta',
+        assistantResponse: 'Berikut rekomendasi kos di Sleman...',
+        toolsUsed: ['semanticSearch'],
+        rating: 'down',
+        comment: 'Harga di kartu tidak sesuai filter',
+        sessionId: 'sess-unit-test',
+      }),
+    });
+
+    const resp = await feedbackPost(req);
+    expect(resp.status).toBe(201);
+    const body = (await resp.json()) as {
+      success: boolean;
+      data: { id: number; rating: string };
+    };
+    expect(body.success).toBe(true);
+    expect(body.data.id).toBe(101);
+    expect(body.data.rating).toBe('down');
+    expect(mockInsertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userPrompt: 'Carikan kos putri di Sleman budget 1 juta',
+        assistantResponse: 'Berikut rekomendasi kos di Sleman...',
+        toolsUsed: ['semanticSearch'],
+        rating: 'down',
+        comment: 'Harga di kartu tidak sesuai filter',
+        sessionHash: expect.stringMatching(/^[a-f0-9]{64}$/),
+      })
+    );
+  });
+
+  it('returns 400 when rating or required fields are invalid', async () => {
+    const req = new Request('http://localhost:3000/api/chat/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userPrompt: '',
+        assistantResponse: 'Jawaban',
+        rating: 'neutral',
+      }),
+    });
+
+    const resp = await feedbackPost(req);
+    expect(resp.status).toBe(400);
+    expect(mockInsertValues).not.toHaveBeenCalled();
   });
 });

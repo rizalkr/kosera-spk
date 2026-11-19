@@ -27,6 +27,10 @@ interface UiChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  userPrompt?: string;
+  toolsUsed?: string[];
+  feedbackRating?: 'up' | 'down';
+  feedbackSubmitting?: boolean;
   cards?: ChatKosCard[];
   error?: boolean;
 }
@@ -45,6 +49,7 @@ interface ChatMessageRowProps {
   isActiveStreaming: boolean;
   failedImages: Record<number, boolean>;
   onImageError: (kosId: number) => void;
+  onFeedback: (msgId: string, rating: 'up' | 'down') => void;
 }
 
 const ChatMessageRow = React.memo(function ChatMessageRow({
@@ -52,8 +57,11 @@ const ChatMessageRow = React.memo(function ChatMessageRow({
   isActiveStreaming,
   failedImages,
   onImageError,
+  onFeedback,
 }: ChatMessageRowProps) {
   const isUser = msg.role === 'user';
+  const showFeedbackBar =
+    !isUser && !msg.error && !isActiveStreaming && msg.content.trim().length > 0;
 
   return (
     <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
@@ -140,6 +148,80 @@ const ChatMessageRow = React.memo(function ChatMessageRow({
           })}
         </div>
       )}
+
+      {/* Subtle Feedback Bar beneath completed assistant responses */}
+      {showFeedbackBar && (
+        <div className="mt-1.5 flex items-center gap-1.5 px-0.5">
+          {msg.feedbackRating ? (
+            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-[var(--ink-secondary)]">
+              <svg
+                className="w-3 h-3 text-[var(--accent-primary)]"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M20 6 9 17l-5-5" />
+              </svg>
+              <span>
+                {msg.feedbackRating === 'up'
+                  ? 'Terima kasih atas masukannya'
+                  : 'Masukan tercatat untuk evaluasi model'}
+              </span>
+            </span>
+          ) : (
+            <>
+              <button
+                type="button"
+                disabled={msg.feedbackSubmitting}
+                onClick={() => onFeedback(msg.id, 'up')}
+                aria-label="Jawaban membantu"
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium text-[var(--ink-secondary)] bg-[var(--bg-canvas)] border border-[var(--border-stone)] hover:border-[var(--accent-primary)] hover:text-[var(--accent-primary)] disabled:opacity-50 transition-colors cursor-pointer"
+              >
+                <svg
+                  className="w-2.5 h-2.5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M7 10v12" />
+                  <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z" />
+                </svg>
+                <span>Membantu</span>
+              </button>
+              <button
+                type="button"
+                disabled={msg.feedbackSubmitting}
+                onClick={() => onFeedback(msg.id, 'down')}
+                aria-label="Jawaban kurang tepat"
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium text-[var(--ink-secondary)] bg-[var(--bg-canvas)] border border-[var(--border-stone)] hover:border-rose-300 hover:text-rose-700 disabled:opacity-50 transition-colors cursor-pointer"
+              >
+                <svg
+                  className="w-2.5 h-2.5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M17 14V2" />
+                  <path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z" />
+                </svg>
+                <span>Kurang tepat</span>
+              </button>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 });
@@ -164,6 +246,29 @@ export default function KoseraChatWidget() {
   const isAutoScrollEnabledRef = useRef(true);
   const pendingDeltaRef = useRef('');
   const rafIdRef = useRef<number | null>(null);
+  const sessionIdRef = useRef<string>('');
+  const messagesRef = useRef<UiChatMessage[]>([]);
+  messagesRef.current = messages;
+
+  const getClientSessionId = useCallback((): string => {
+    if (sessionIdRef.current) return sessionIdRef.current;
+    try {
+      const storageKey = 'kosera_chat_session_id';
+      const existing = window.sessionStorage.getItem(storageKey);
+      if (existing) {
+        sessionIdRef.current = existing;
+        return existing;
+      }
+      const created = `sess-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      window.sessionStorage.setItem(storageKey, created);
+      sessionIdRef.current = created;
+      return created;
+    } catch {
+      const fallback = `sess-${Date.now()}`;
+      sessionIdRef.current = fallback;
+      return fallback;
+    }
+  }, []);
 
   const isExcludedRoute = EXCLUDED_PREFIXES.some((prefix) =>
     pathname?.startsWith(prefix)
@@ -172,6 +277,68 @@ export default function KoseraChatWidget() {
   const handleImageError = useCallback((kosId: number) => {
     setFailedImages((prev) => (prev[kosId] ? prev : { ...prev, [kosId]: true }));
   }, []);
+
+  const handleSubmitFeedback = useCallback(
+    async (msgId: string, rating: 'up' | 'down') => {
+      const currentList = messagesRef.current;
+      const targetIndex = currentList.findIndex((m) => m.id === msgId);
+      if (targetIndex === -1) return;
+
+      const targetMsg = currentList[targetIndex];
+      if (
+        targetMsg.role !== 'assistant' ||
+        targetMsg.error ||
+        targetMsg.feedbackRating ||
+        targetMsg.feedbackSubmitting ||
+        !targetMsg.content.trim()
+      ) {
+        return;
+      }
+
+      let promptText = targetMsg.userPrompt?.trim() || '';
+      if (!promptText) {
+        for (let i = targetIndex - 1; i >= 0; i--) {
+          if (currentList[i].role === 'user' && currentList[i].content.trim()) {
+            promptText = currentList[i].content.trim();
+            break;
+          }
+        }
+      }
+      if (!promptText) return;
+
+      // Optimistically mark feedback state so UI responds immediately
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === msgId
+            ? { ...m, feedbackRating: rating, feedbackSubmitting: true }
+            : m
+        )
+      );
+
+      try {
+        await fetch('/api/chat/feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userPrompt: promptText,
+            assistantResponse: targetMsg.content,
+            toolsUsed: targetMsg.toolsUsed ?? [],
+            rating,
+            sessionId: getClientSessionId(),
+          }),
+        });
+      } catch {
+        // Keep optimistic UI state; feedback is non-critical telemetry
+      } finally {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === msgId ? { ...m, feedbackSubmitting: false } : m
+          )
+        );
+      }
+    },
+    [getClientSessionId]
+  );
 
   const scrollToBottom = useCallback((smooth = false) => {
     const el = scrollContainerRef.current;
@@ -310,6 +477,8 @@ export default function KoseraChatWidget() {
       id: assistantMsgId,
       role: 'assistant',
       content: '',
+      userPrompt: text,
+      toolsUsed: [],
       cards: [],
     };
 
@@ -427,6 +596,9 @@ export default function KoseraChatWidget() {
             const finalCards = Array.isArray(payload.cards)
               ? (payload.cards as ChatKosCard[])
               : undefined;
+            const finalTools = Array.isArray(payload.toolsUsed)
+              ? payload.toolsUsed.filter((t): t is string => typeof t === 'string')
+              : undefined;
 
             setMessages((prev) =>
               prev.map((m) => {
@@ -436,6 +608,7 @@ export default function KoseraChatWidget() {
                   ...m,
                   content: combined || finalContent || 'Maaf, belum ada respons dari asisten.',
                   cards: finalCards && finalCards.length > 0 ? finalCards : m.cards,
+                  toolsUsed: finalTools ?? m.toolsUsed ?? [],
                 };
               })
             );
@@ -621,6 +794,7 @@ export default function KoseraChatWidget() {
                   isActiveStreaming={isStreaming && msg.id === activeStreamMsgId}
                   failedImages={failedImages}
                   onImageError={handleImageError}
+                  onFeedback={handleSubmitFeedback}
                 />
               ))
             )}

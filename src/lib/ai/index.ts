@@ -56,6 +56,9 @@ export {
 export {
   getLLMServiceUrl,
   getLLMApiKey,
+  getLLMProvider,
+  getLLMModelName,
+  KOSERA_TOOL_SCHEMAS,
   checkLLMHealth,
   parseToolCalls,
   parseFacilitiesList,
@@ -70,4 +73,5 @@ export {
   type ToolExecutionResult,
   type LLMHealthResponse,
   type RemoteLLMEvent,
+  type LLMProviderType,
 } from './chat';

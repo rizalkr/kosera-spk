@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, pgEnum, boolean, decimal, doublePrecision, varchar, customType } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, integer, timestamp, pgEnum, boolean, decimal, doublePrecision, varchar, jsonb, customType } from 'drizzle-orm/pg-core';
 
 // Custom type for pgvector - stores embeddings as float arrays
 // Dimension 384 matches the output of all-MiniLM-L6-v2 model
@@ -194,6 +194,18 @@ export const userPreferences = pgTable('user_preferences', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+// Anonymized Chat Feedback table for SFT v2 continuous improvement (Phase 7.4)
+export const chatFeedback = pgTable('chat_feedback', {
+  id: serial('id').primaryKey(),
+  sessionHash: varchar('session_hash', { length: 64 }).notNull(),
+  userPrompt: text('user_prompt').notNull(),
+  assistantResponse: text('assistant_response').notNull(),
+  toolsUsed: jsonb('tools_used').$type<string[]>().default([]).notNull(),
+  rating: varchar('rating', { length: 10 }).notNull(), // 'up' | 'down'
+  comment: text('comment'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -221,3 +233,6 @@ export type NewBookingStatusHistory = typeof bookingStatusHistory.$inferInsert;
 
 export type UserPreference = typeof userPreferences.$inferSelect;
 export type NewUserPreference = typeof userPreferences.$inferInsert;
+
+export type ChatFeedback = typeof chatFeedback.$inferSelect;
+export type NewChatFeedback = typeof chatFeedback.$inferInsert;

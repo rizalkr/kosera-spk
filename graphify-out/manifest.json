@@ -1416,9 +1416,9 @@
     "semantic_hash": ""
   },
   "src/db/schema.ts": {
-    "mtime": 1794988210.607296,
-    "seen": 1794989559.057029,
-    "ast_hash": "15f6f19074ff672c25ab8d8fcd20d208",
+    "mtime": 1795066308.7441168,
+    "seen": 1795066517.4123638,
+    "ast_hash": "afb987ca807c1b16c60f07493c40de65",
     "semantic_hash": ""
   },
   "src/db/seed-data-usm-complete.json": {
@@ -1674,9 +1674,9 @@
     "semantic_hash": ""
   },
   "src/lib/ai/index.ts": {
-    "mtime": 1795065973.127834,
-    "seen": 1795066204.9105992,
-    "ast_hash": "e724ae2589c288fc97219ae2c58a466a",
+    "mtime": 1795066683.379831,
+    "seen": 1795066915.4315178,
+    "ast_hash": "e366706560def2b02458275ec00f0222",
     "semantic_hash": ""
   },
   "src/lib/ai/indexer.ts": {
@@ -2346,9 +2346,9 @@
     "semantic_hash": ""
   },
   "src/components/features/chat/KoseraChatWidget.tsx": {
-    "mtime": 1795065655.218348,
-    "seen": 1795065792.569221,
-    "ast_hash": "40232a14fdf48b021474eca2efda1e93",
+    "mtime": 1795066407.2337441,
+    "seen": 1795066517.4071841,
+    "ast_hash": "673663780283168d7dce827e88d98bd1",
     "semantic_hash": ""
   },
   "src/components/features/compare/GlobalCompareDock.tsx": {
@@ -2382,9 +2382,9 @@
     "semantic_hash": ""
   },
   "src/lib/ai/chat.ts": {
-    "mtime": 1795065655.0623453,
-    "seen": 1795065792.5752354,
-    "ast_hash": "51136b8b4246fb36ca5a8a8bd2ee3195",
+    "mtime": 1795066662.9305935,
+    "seen": 1795066915.431402,
+    "ast_hash": "b863c0c8fc7f8ecd2abe40977f38407e",
     "semantic_hash": ""
   },
   "src/lib/utils/discovery.ts": {
@@ -2394,9 +2394,9 @@
     "semantic_hash": ""
   },
   "tests/unit/ai-chat.test.ts": {
-    "mtime": 1795065691.3404667,
-    "seen": 1795065792.5775058,
-    "ast_hash": "aaee674f9a5f92abed5b90b4eb290bb1",
+    "mtime": 1795066723.592545,
+    "seen": 1795066915.4337206,
+    "ast_hash": "d65e3476e3566def7e86c399c2844ca3",
     "semantic_hash": ""
   },
   "tests/unit/compare-store.test.ts": {
@@ -2463,6 +2463,12 @@
     "mtime": 1795066176.4628365,
     "seen": 1795066204.912784,
     "ast_hash": "f7429753f36305c2614001f309daf946",
+    "semantic_hash": ""
+  },
+  "src/app/api/chat/feedback/route.ts": {
+    "mtime": 1795066339.9942057,
+    "seen": 1795066517.403062,
+    "ast_hash": "614951c17a7504080a08cb5fe3479738",
     "semantic_hash": ""
   },
   "package-lock.json": {
