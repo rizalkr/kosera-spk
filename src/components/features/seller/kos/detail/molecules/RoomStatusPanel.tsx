@@ -7,32 +7,45 @@ export interface RoomStatusPanelProps {
   occupancyRate: number;
 }
 
-export const RoomStatusPanel: React.FC<RoomStatusPanelProps> = ({ totalRooms, occupiedRooms, vacantRooms, occupancyRate }) => {
+export const RoomStatusPanel: React.FC<RoomStatusPanelProps> = ({
+  totalRooms,
+  occupiedRooms,
+  vacantRooms,
+  occupancyRate,
+}) => {
+  const items = [
+    { value: totalRooms, label: 'Total Kamar', tone: 'text-[var(--ink-primary)]' },
+    { value: occupiedRooms, label: 'Kamar Terisi', tone: 'text-[var(--accent-primary)]' },
+    { value: vacantRooms, label: 'Kamar Kosong', tone: 'text-[var(--accent-spark)]' },
+  ];
+
   return (
-    <div className="bg-gray-50 rounded-xl p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">Status Kamar</h3>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {[
-          { icon: '🛏️', value: totalRooms, label: 'Total Kamar', color: 'text-gray-900', ring: 'bg-blue-100' },
-          { icon: '✅', value: occupiedRooms, label: 'Kamar Terisi', color: 'text-green-600', ring: 'bg-green-100' },
-          { icon: '🆓', value: vacantRooms, label: 'Kamar Kosong', color: 'text-red-600', ring: 'bg-red-100' },
-        ].map(item => (
-          <div key={item.label} className="text-center">
-            <div className={`w-16 h-16 ${item.ring} rounded-full flex items-center justify-center mx-auto mb-3`}>
-              <span className="text-2xl">{item.icon}</span>
-            </div>
-            <div className={`text-2xl font-bold ${item.color}`}>{item.value}</div>
-            <div className="text-sm text-gray-600">{item.label}</div>
+    <div className="bg-[var(--bg-canvas)] border border-[var(--border-stone)] rounded-[16px] p-6">
+      <h3 className="text-base font-bold text-[var(--ink-primary)] mb-4">Status Kamar</h3>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {items.map((item) => (
+          <div
+            key={item.label}
+            className="bg-[var(--bg-surface)] border border-[var(--border-stone)] rounded-[12px] p-4 text-center"
+          >
+            <div className={`font-mono-tabular text-2xl font-bold ${item.tone}`}>{item.value}</div>
+            <div className="text-xs font-medium text-[var(--ink-secondary)] mt-1">{item.label}</div>
           </div>
         ))}
       </div>
-      <div className="mt-6">
-        <div className="flex justify-between items-center mb-2">
-          <span className="text-sm text-gray-600">Tingkat Hunian</span>
-          <span className="text-sm font-semibold text-gray-900">{occupancyRate}%</span>
+
+      <div className="mt-5">
+        <div className="flex justify-between items-center mb-2 text-xs">
+          <span className="font-medium text-[var(--ink-secondary)]">Tingkat Hunian</span>
+          <span className="font-mono-tabular font-bold text-[var(--ink-primary)]">
+            {occupancyRate}%
+          </span>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-3">
-          <div className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-500" style={{ width: `${occupancyRate}%` }} />
+        <div className="w-full bg-[var(--bg-muted)] rounded-full h-2.5 overflow-hidden">
+          <div
+            className="bg-[var(--accent-primary)] h-2.5 rounded-full transition-all duration-500"
+            style={{ width: `${occupancyRate}%` }}
+          />
         </div>
       </div>
     </div>

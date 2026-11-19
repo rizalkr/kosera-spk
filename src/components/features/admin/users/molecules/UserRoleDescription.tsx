@@ -7,15 +7,20 @@ export interface UserRoleDescriptionProps {
 
 export const UserRoleDescription: React.FC<UserRoleDescriptionProps> = ({ role }) => {
   const description = {
-    ADMIN: 'User dengan akses penuh untuk mengelola sistem, termasuk user management dan dashboard admin.',
-    SELLER: 'User yang memiliki kos dan dapat mengelola listing kos untuk disewakan kepada renter.',
-    RENTER: 'User yang mencari kos untuk disewa, dapat browsing dan booking kos yang tersedia.'
+    ADMIN:
+      'User dengan akses penuh untuk mengelola sistem, termasuk manajemen pengguna dan dashboard admin.',
+    SELLER:
+      'User yang memiliki properti kos dan dapat mengelola listing, kamar, serta pengajuan booking.',
+    RENTER:
+      'User yang mencari kos, menyimpan favorit, mengatur preferensi SPK, dan mengajukan booking.',
   }[role];
 
   return (
-    <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-      <h4 className="font-semibold text-blue-800 mb-2">Keterangan Role {role}:</h4>
-      <p className="text-sm text-blue-700">{description}</p>
+    <div className="mt-6 bg-[var(--accent-tint)] border border-[#BBDCD0] rounded-[14px] p-4">
+      <h4 className="text-xs font-bold text-[var(--accent-primary)] mb-1">
+        Keterangan Role {role}
+      </h4>
+      <p className="text-xs sm:text-sm text-[var(--ink-primary)]">{description}</p>
     </div>
   );
 };

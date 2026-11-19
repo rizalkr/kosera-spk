@@ -40,3 +40,23 @@ export {
   DEFAULT_HYBRID_WEIGHT_PM,
   DEFAULT_HYBRID_WEIGHT_AI,
 } from './hybrid';
+
+// Conversational RAG & LLM Chat Gateway
+export {
+  getLLMServiceUrl,
+  getLLMApiKey,
+  checkLLMHealth,
+  parseToolCalls,
+  parseFacilitiesList,
+  parseSSEFrames,
+  formatSSE,
+  executeChatTool,
+  streamLLMChat,
+  type ChatRole,
+  type ChatToolCall,
+  type ChatMessage,
+  type ChatKosCard,
+  type ToolExecutionResult,
+  type LLMHealthResponse,
+  type RemoteLLMEvent,
+} from './chat';

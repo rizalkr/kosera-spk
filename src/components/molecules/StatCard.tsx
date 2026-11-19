@@ -1,5 +1,5 @@
-// src/components/molecules/StatCard.tsx
 'use client';
+
 import React from 'react';
 import { Card } from '@/components/atoms';
 import clsx from 'clsx';
@@ -10,17 +10,17 @@ export interface StatCardProps {
   title: string;
   value: string | number;
   subtitle?: string;
-  icon: string; // emoji or icon char
+  icon: React.ReactNode;
   color?: StatCardColor;
   className?: string;
 }
 
-const colorClasses: Record<StatCardColor, string> = {
-  blue: 'bg-blue-50 text-blue-600 border-blue-200',
-  green: 'bg-green-50 text-green-600 border-green-200',
-  yellow: 'bg-yellow-50 text-yellow-600 border-yellow-200',
-  purple: 'bg-purple-50 text-purple-600 border-purple-200',
-  red: 'bg-red-50 text-red-600 border-red-200',
+const iconToneClasses: Record<StatCardColor, string> = {
+  blue: 'bg-[var(--accent-tint)] text-[var(--accent-primary)] border border-[#BBDCD0]',
+  green: 'bg-[var(--accent-tint)] text-[var(--accent-primary)] border border-[#BBDCD0]',
+  yellow: 'bg-[var(--accent-spark-tint)] text-[var(--accent-spark)] border border-[#F2CDBB]',
+  purple: 'bg-[var(--bg-muted)] text-[var(--ink-primary)] border border-[var(--border-stone)]',
+  red: 'bg-[var(--accent-danger-tint)] text-[var(--accent-danger)] border border-[#ECC6C0]',
 };
 
 /**
@@ -36,14 +36,33 @@ export const StatCard: React.FC<StatCardProps> = ({
   className,
 }) => {
   return (
-    <Card className={clsx('border p-6', colorClasses[color], className)} padding="none" bordered>
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium opacity-80">{title}</p>
-          <p className="text-2xl font-bold mt-1">{value}</p>
-          {subtitle && <p className="text-xs opacity-60 mt-1">{subtitle}</p>}
+    <Card
+      className={clsx(
+        'bg-[var(--bg-surface)] border border-[var(--border-stone)] rounded-[16px] p-5',
+        className
+      )}
+      padding="none"
+      bordered
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-xs font-medium text-[var(--ink-secondary)]">{title}</p>
+          <p className="font-mono-tabular text-2xl font-bold text-[var(--ink-primary)] mt-1.5 truncate">
+            {value}
+          </p>
+          {subtitle && (
+            <p className="font-mono-tabular text-xs text-[var(--ink-secondary)] mt-1">{subtitle}</p>
+          )}
         </div>
-        <div className="text-3xl opacity-50">{icon}</div>
+        <div
+          className={clsx(
+            'h-10 w-10 rounded-[12px] flex items-center justify-center shrink-0',
+            iconToneClasses[color]
+          )}
+          aria-hidden="true"
+        >
+          {icon}
+        </div>
       </div>
     </Card>
   );

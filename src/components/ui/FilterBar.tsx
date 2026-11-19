@@ -85,67 +85,96 @@ export default function FilterBar({ onFilter, initialFilters = {} }: FilterBarPr
   };
 
   return (
-    <div className="bg-[#E1F6F2] border border-blue-100 rounded-xl shadow p-4 space-y-4">
+    <div className="bg-[var(--bg-surface)] border border-[var(--border-stone)] rounded-[16px] p-4 space-y-4">
       {/* Basic Search */}
-      <div className="flex items-center gap-4 flex-wrap">
+      <div className="flex items-center gap-3 flex-wrap">
         {/* Search Text */}
-        <div className="flex items-center border bg-white text-blue-300 rounded-lg px-3 py-2 flex-1 min-w-[200px] relative">
-          <svg className="w-5 h-5 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        <div className="flex items-center border border-[var(--border-stone)] bg-[var(--bg-canvas)] text-[var(--ink-primary)] rounded-[10px] px-3 py-2 flex-1 min-w-[200px] relative">
+          <svg
+            className="w-4 h-4 text-[var(--ink-secondary)] mr-2 shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={1.75}
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
           </svg>
           <input
             type="text"
             placeholder="Cari kos..."
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
-            className="outline-none flex-1"
-            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+            className="outline-none bg-transparent text-sm text-[var(--ink-primary)] placeholder:text-[var(--ink-secondary)]/70 flex-1"
+            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
           />
           {isFiltering && (
-            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+              <div className="animate-spin rounded-full h-4 w-4 border-2 border-[var(--border-stone)] border-t-[var(--accent-primary)]" />
             </div>
           )}
         </div>
 
         {/* Kecamatan Select */}
-        <div className="flex items-center border bg-white text-blue-300 rounded-lg px-3 py-2">
-          <svg className="w-5 h-5 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+        <div className="flex items-center border border-[var(--border-stone)] bg-[var(--bg-canvas)] text-[var(--ink-primary)] rounded-[10px] px-3 py-2">
+          <svg
+            className="w-4 h-4 text-[var(--ink-secondary)] mr-2 shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={1.75}
+              d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+            />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={1.75}
+              d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+            />
           </svg>
-          <select 
-            value={city} 
-            onChange={(e) => setCity(e.target.value)} 
-            className="outline-none"
+          <select
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            className="outline-none bg-transparent text-sm text-[var(--ink-primary)]"
           >
             <option value="">Semua Kecamatan</option>
             {kecamatanList.map((kecamatan) => (
-              <option key={kecamatan} value={kecamatan}>{kecamatan}</option>
+              <option key={kecamatan} value={kecamatan}>
+                {kecamatan}
+              </option>
             ))}
           </select>
         </div>
 
         {/* Advanced Toggle */}
         <button
+          type="button"
           onClick={() => setIsAdvancedOpen(!isAdvancedOpen)}
-          className="flex items-center gap-2 text-blue-500 hover:text-blue-500 px-3 py-2 rounded-lg hover:bg-blue-50 transition-colors"
+          className="flex items-center gap-2 text-xs font-semibold text-[var(--accent-primary)] bg-[var(--accent-tint)] border border-[#BBDCD0] px-3.5 py-2.5 rounded-[10px] hover:bg-[var(--accent-primary)] hover:text-white transition-colors cursor-pointer"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={1.75}
+              d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4"
+            />
           </svg>
-          Filter Lanjutan
-          {isFiltering && (
-            <div className="flex items-center ml-1">
-              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-500"></div>
-            </div>
-          )}
+          <span>Filter Lanjutan</span>
         </button>
 
-        {/* Filter Status */}
         {isFiltering && (
-          <div className="flex items-center gap-2 text-blue-500 text-sm">
-            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-500"></div>
+          <div className="flex items-center gap-2 text-[var(--accent-primary)] text-xs font-medium">
+            <div className="animate-spin rounded-full h-3 w-3 border-2 border-[var(--border-stone)] border-t-[var(--accent-primary)]" />
             <span>Memfilter...</span>
           </div>
         )}
@@ -153,42 +182,45 @@ export default function FilterBar({ onFilter, initialFilters = {} }: FilterBarPr
 
       {/* Advanced Filters */}
       {isAdvancedOpen && (
-        <div className="border-t pt-4 space-y-4">
-          {/* Price Range */}
+        <div className="border-t border-[var(--border-stone)] pt-4 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Rentang Harga</label>
-            <div className="flex items-center gap-3">
+            <label className="block text-xs font-semibold text-[var(--ink-primary)] mb-2">
+              Rentang Harga
+            </label>
+            <div className="flex items-center gap-2.5 flex-wrap">
               <input
                 type="number"
                 placeholder="Min"
                 value={minPrice}
                 onChange={(e) => setMinPrice(e.target.value)}
-                className="text-gray-500 border rounded-lg px-3 py-2 w-24 outline-none focus:ring-2 focus:ring-blue-200"
+                className="font-mono-tabular text-sm bg-[var(--bg-canvas)] text-[var(--ink-primary)] border border-[var(--border-stone)] rounded-[10px] px-3 py-2 w-28 outline-none focus:ring-2 focus:ring-[var(--accent-primary)]/20 focus:border-[var(--accent-primary)]"
               />
-              <span className="text-gray-500">-</span>
+              <span className="text-[var(--ink-secondary)]">-</span>
               <input
                 type="number"
                 placeholder="Max"
                 value={maxPrice}
                 onChange={(e) => setMaxPrice(e.target.value)}
-                className="text-gray-500 border rounded-lg px-3 py-2 w-24 outline-none focus:ring-2 focus:ring-blue-200"
+                className="font-mono-tabular text-sm bg-[var(--bg-canvas)] text-[var(--ink-primary)] border border-[var(--border-stone)] rounded-[10px] px-3 py-2 w-28 outline-none focus:ring-2 focus:ring-[var(--accent-primary)]/20 focus:border-[var(--accent-primary)]"
               />
-              <span className="text-sm text-gray-500">ribu/bulan</span>
+              <span className="text-xs text-[var(--ink-secondary)]">ribu/bulan</span>
             </div>
           </div>
 
-          {/* Facilities */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Fasilitas</label>
+            <label className="block text-xs font-semibold text-[var(--ink-primary)] mb-2">
+              Fasilitas
+            </label>
             <div className="flex flex-wrap gap-2">
-              {facilities.map(facility => (
+              {facilities.map((facility) => (
                 <button
                   key={facility}
+                  type="button"
                   onClick={() => handleFacilityToggle(facility)}
-                  className={`px-3 py-1 rounded-full text-sm transition-colors ${
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors cursor-pointer ${
                     selectedFacilities.includes(facility)
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-white text-gray-600 hover:bg-blue-50'
+                      ? 'bg-[var(--accent-primary)] text-white border-[var(--accent-primary)]'
+                      : 'bg-[var(--bg-muted)] text-[var(--ink-primary)] border-[var(--border-stone)] hover:border-[var(--ink-secondary)]'
                   }`}
                 >
                   {facility}
@@ -197,20 +229,14 @@ export default function FilterBar({ onFilter, initialFilters = {} }: FilterBarPr
             </div>
           </div>
 
-          {/* Action Buttons */}
           <div className="flex items-center gap-3 pt-2">
             <button
+              type="button"
               onClick={handleReset}
-              className="text-gray-600 hover:text-gray-700 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              className="text-xs font-semibold text-[var(--ink-primary)] px-4 py-2 border border-[var(--border-stone)] bg-[var(--bg-canvas)] rounded-[10px] hover:border-[var(--ink-secondary)] transition-colors cursor-pointer"
             >
               Reset
             </button>
-            {isFiltering && (
-              <div className="flex items-center gap-2 text-blue-500">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
-                <span className="text-sm">Menerapkan filter...</span>
-              </div>
-            )}
           </div>
         </div>
       )}

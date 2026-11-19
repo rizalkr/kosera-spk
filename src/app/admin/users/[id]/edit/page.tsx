@@ -34,21 +34,28 @@ function EditUserPage() {
 
   return (
     <ProtectedRoute requireAuth={true} allowedRoles={['ADMIN']}>
-      <div className="min-h-screen bg-[#A9E4DE] pt-20">
+      <div className="min-h-[100dvh] bg-[var(--bg-canvas)] pt-16 flex flex-col">
         <Header />
-        <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <main className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 pb-5 border-b border-[var(--border-stone)]">
             <div>
-              <h1 className="text-3xl font-bold text-blue-600 mb-2">Edit User</h1>
-              <p className="text-gray-600">Edit informasi user {user.name} (#{user.id})</p>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--ink-primary)]">
+                Edit User
+              </h1>
+              <p className="text-sm text-[var(--ink-secondary)] mt-1">
+                Perbarui informasi user {user.name}{' '}
+                <span className="font-mono-tabular">(#{user.id})</span>
+              </p>
             </div>
-            <div className="flex gap-3">
-              <button onClick={() => router.push(`/admin/users/${user.id}`)} className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors">
-                ← Kembali ke Detail
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => router.push(`/admin/users/${user.id}`)}
+              className="px-4 py-2 rounded-[10px] text-xs font-semibold border border-[var(--border-stone)] bg-[var(--bg-surface)] text-[var(--ink-primary)] hover:border-[var(--ink-secondary)] transition-colors cursor-pointer"
+            >
+              Kembali ke Detail
+            </button>
           </div>
-          <div className="bg-white rounded-lg shadow-lg p-6">
+          <div className="bg-[var(--bg-surface)] border border-[var(--border-stone)] rounded-[20px] p-6 sm:p-8">
             <UserEditForm
               user={user}
               onSuccess={async (u) => {

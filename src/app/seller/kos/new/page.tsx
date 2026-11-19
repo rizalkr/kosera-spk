@@ -8,21 +8,33 @@ export default function NewKosPage() {
   const router = useRouter();
   return (
     <ProtectedRoute requireAuth={true} allowedRoles={['SELLER']}>
-      <div className="min-h-screen bg-gray-50 py-8">
+      <div className="min-h-[100dvh] bg-[var(--bg-canvas)] py-8">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-8">
             <button
+              type="button"
               onClick={() => router.back()}
-              className="flex items-center text-gray-600 hover:text-gray-900 mb-4"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--ink-secondary)] hover:text-[var(--accent-primary)] mb-3 transition-colors cursor-pointer"
             >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                strokeWidth={1.75}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M15 19l-7-7 7-7" />
               </svg>
-              Kembali
+              <span>Kembali</span>
             </button>
-            <h1 className="text-3xl font-bold text-gray-900">Tambah Kos Baru</h1>
-            <p className="text-gray-600 mt-2">
-              Lengkapi informasi kos Anda untuk menarik lebih banyak penyewa
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--ink-primary)]">
+              Tambah Kos Baru
+            </h1>
+            <p className="text-sm text-[var(--ink-secondary)] mt-1">
+              Lengkapi informasi kos Anda agar mudah ditemukan dan dicocokkan oleh sistem SPK Kosera.
             </p>
           </div>
           <KosFormShell />

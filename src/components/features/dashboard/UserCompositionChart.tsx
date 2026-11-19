@@ -1,14 +1,8 @@
 'use client';
 
-import {
-  Chart as ChartJS,
-  ArcElement,
-  Tooltip,
-  Legend,
-} from 'chart.js';
+import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { Pie } from 'react-chartjs-2';
 
-// Register Chart.js components
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 interface UserCompositionData {
@@ -23,39 +17,32 @@ interface UserCompositionData {
 }
 
 export const UserCompositionChart = () => {
-  // Pie chart data - user composition
   const userCompositionData: UserCompositionData = {
-    labels: ['Renters', 'Property Owners'],
+    labels: ['Pencari Kos (Renter)', 'Pemilik Kos (Seller)'],
     datasets: [
       {
-        label: 'Users',
-        data: [267, 89], // Placeholder data
-        backgroundColor: [
-          'rgba(139, 92, 246, 0.8)',
-          'rgba(16, 185, 129, 0.8)',
-        ],
-        borderColor: [
-          'rgba(139, 92, 246, 1)',
-          'rgba(16, 185, 129, 1)',
-        ],
+        label: 'Pengguna',
+        data: [267, 89],
+        backgroundColor: ['#1E6B52', '#D96B38'],
+        borderColor: ['#FFFFFF', '#FFFFFF'],
         borderWidth: 2,
       },
     ],
   };
 
-  // Pie chart options
   const pieOptions = {
     responsive: true,
-    devicePixelRatio: 4,
+    devicePixelRatio: 2,
     maintainAspectRatio: false,
     plugins: {
       legend: {
         position: 'bottom' as const,
         labels: {
-          padding: 15,
+          padding: 16,
           usePointStyle: true,
+          color: '#181A18',
           font: {
-            size: 14,
+            size: 12,
           },
         },
       },
@@ -68,7 +55,7 @@ export const UserCompositionChart = () => {
     },
     elements: {
       arc: {
-        borderWidth: 3,
+        borderWidth: 2,
       },
     },
   };

@@ -3,8 +3,6 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
-import Header from '@/components/layouts/Header';
-import Footer from '@/components/layouts/Footer';
 import ProtectedRoute from '@/components/layouts/ProtectedRoute';
 import { useAuthToken } from '@/hooks/auth/useAuthToken';
 import { useKosDetails } from '@/hooks/useApi';
@@ -279,21 +277,17 @@ export default function SellerKosPhotosPage() {
   if (isLoading) {
     return (
       <ProtectedRoute requireAuth={true} allowedRoles={['SELLER']}>
-        <div className="min-h-screen bg-[#A9E4DE] pt-20">
-          <Header />
+        <div className="min-h-[100dvh] bg-[var(--bg-canvas)]">
           <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div className="bg-white rounded-2xl shadow-lg p-8">
-              <div className="animate-pulse">
-                <div className="h-8 bg-gray-300 rounded mb-6 w-64"></div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {[...Array(6)].map((_, i) => (
-                    <div key={i} className="h-48 bg-gray-300 rounded-lg"></div>
-                  ))}
-                </div>
+            <div className="bg-[var(--bg-surface)] border border-[var(--border-stone)] rounded-[20px] p-8 animate-pulse space-y-6">
+              <div className="h-8 bg-[var(--bg-muted)] rounded w-64" />
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="h-48 bg-[var(--bg-muted)] rounded-[14px]" />
+                ))}
               </div>
             </div>
           </main>
-          <Footer />
         </div>
       </ProtectedRoute>
     );
@@ -303,34 +297,38 @@ export default function SellerKosPhotosPage() {
   if (error || !kosData) {
     return (
       <ProtectedRoute requireAuth={true} allowedRoles={['SELLER']}>
-        <div className="min-h-screen bg-[#A9E4DE] pt-20">
-          <Header />
-          <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div className="bg-white rounded-2xl shadow-lg p-8">
-              <div className="text-center py-12">
-                <div className="text-red-400 text-6xl mb-4">⚠️</div>
-                <h3 className="text-xl font-semibold text-gray-600 mb-2">Gagal Memuat Data Kos</h3>
-                <p className="text-gray-500 mb-4">
-                  Terjadi kesalahan saat mengambil data kos untuk mengelola foto.
-                </p>
-                <div className="flex justify-center space-x-4">
-                  <button 
-                    onClick={() => refetch()}
-                    className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                  >
-                    Coba Lagi
-                  </button>
-                  <button 
-                    onClick={() => router.push(`/seller/kos/${kosId}`)}
-                    className="bg-gray-200 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-300 transition-colors font-medium"
-                  >
-                    Kembali ke Detail
-                  </button>
-                </div>
+        <div className="min-h-[100dvh] bg-[var(--bg-canvas)]">
+          <main className="max-w-3xl mx-auto px-4 sm:px-6 py-12">
+            <div className="bg-[var(--bg-surface)] border border-[var(--border-stone)] rounded-[20px] p-8 text-center space-y-4">
+              <div className="h-12 w-12 mx-auto rounded-full bg-[var(--accent-danger-tint)] text-[var(--accent-danger)] flex items-center justify-center">
+                <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                  <line x1="12" y1="9" x2="12" y2="13" />
+                  <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-[var(--ink-primary)]">Gagal Memuat Data Kos</h3>
+              <p className="text-sm text-[var(--ink-secondary)]">
+                Terjadi kesalahan saat mengambil data kos untuk mengelola foto.
+              </p>
+              <div className="flex flex-wrap justify-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => refetch()}
+                  className="px-5 py-2.5 rounded-[10px] text-xs font-semibold bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-primary-hover)] transition-colors cursor-pointer"
+                >
+                  Coba Lagi
+                </button>
+                <button
+                  type="button"
+                  onClick={() => router.push(`/seller/kos/${kosId}`)}
+                  className="px-5 py-2.5 rounded-[10px] text-xs font-semibold border border-[var(--border-stone)] bg-[var(--bg-canvas)] text-[var(--ink-primary)] hover:border-[var(--ink-secondary)] transition-colors cursor-pointer"
+                >
+                  Kembali ke Detail
+                </button>
               </div>
             </div>
           </main>
-          <Footer />
         </div>
       </ProtectedRoute>
     );
@@ -338,37 +336,38 @@ export default function SellerKosPhotosPage() {
 
   return (
     <ProtectedRoute requireAuth={true} allowedRoles={['SELLER']}>
-      <div className="min-h-screen bg-[#A9E4DE] pt-20">
-        <Header />
+      <div className="min-h-[100dvh] bg-[var(--bg-canvas)]">
         <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="bg-white rounded-2xl shadow-lg p-8">
+          <div className="bg-[var(--bg-surface)] border border-[var(--border-stone)] rounded-[20px] p-6 sm:p-8 space-y-8">
             {/* Header */}
-            <div className="flex items-center justify-between mb-8">
-              <div>
-                <div className="flex items-center gap-4 mb-2">
-                  <button 
-                    onClick={() => router.push(`/seller/kos/${kosId}`)}
-                    className="bg-gray-100 hover:bg-gray-200 text-gray-700 p-2 rounded-lg transition-colors"
-                  >
-                    ← Kembali
-                  </button>
-                  <h1 className="text-3xl font-bold text-blue-600">Kelola Foto Kos</h1>
-                </div>
-                <p className="text-gray-600">
-                  Atur foto untuk <span className="font-semibold">{kosData.name}</span>
+            <div className="flex flex-wrap items-center justify-between gap-4 pb-5 border-b border-[var(--border-stone)]">
+              <div className="space-y-1.5">
+                <button
+                  type="button"
+                  onClick={() => router.push(`/seller/kos/${kosId}`)}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--ink-secondary)] hover:text-[var(--accent-primary)] transition-colors cursor-pointer"
+                >
+                  <span>Kembali ke Detail Kos</span>
+                </button>
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--ink-primary)]">
+                  Kelola Foto Kos
+                </h1>
+                <p className="text-sm text-[var(--ink-secondary)]">
+                  Atur galeri foto untuk{' '}
+                  <span className="font-semibold text-[var(--ink-primary)]">{kosData.name}</span>
                 </p>
               </div>
             </div>
 
             {/* Upload Section */}
-            <div className="bg-blue-50 rounded-xl p-6 mb-8 border border-blue-200">
-              <h3 className="text-lg font-semibold text-blue-900 mb-4">📸 Upload Foto Baru</h3>
+            <div className="bg-[var(--bg-canvas)] rounded-[16px] p-6 border border-[var(--border-stone)] space-y-4">
+              <h3 className="text-base font-bold text-[var(--ink-primary)]">Unggah Foto Baru</h3>
               <div className="space-y-4">
-                <div 
-                  className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-                    dragActive 
-                      ? 'border-blue-500 bg-blue-50' 
-                      : 'border-blue-300 hover:border-blue-400 hover:bg-blue-25'
+                <div
+                  className={`border-2 border-dashed rounded-[14px] p-7 text-center transition-colors ${
+                    dragActive
+                      ? 'border-[var(--accent-primary)] bg-[var(--accent-tint)]'
+                      : 'border-[var(--border-stone)] bg-[var(--bg-surface)] hover:border-[var(--accent-primary)]'
                   }`}
                   onDragEnter={handleDragEnter}
                   onDragOver={handleDragOver}
@@ -383,52 +382,62 @@ export default function SellerKosPhotosPage() {
                     className="hidden"
                     id="photo-upload"
                   />
-                  <label 
-                    htmlFor="photo-upload"
-                    className="cursor-pointer block"
-                  >
-                    <div className="text-blue-600 text-4xl mb-4">📷</div>
-                    <div className="text-blue-600 font-medium mb-2">
-                      Klik untuk pilih foto atau drag & drop
+                  <label htmlFor="photo-upload" className="cursor-pointer block space-y-2">
+                    <div className="h-12 w-12 mx-auto rounded-full bg-[var(--accent-tint)] text-[var(--accent-primary)] flex items-center justify-center">
+                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                        <polyline points="17 8 12 3 7 8" />
+                        <line x1="12" y1="3" x2="12" y2="15" />
+                      </svg>
                     </div>
-                    <div className="text-blue-500 text-sm">
-                      Maksimal 10 foto, format JPG/PNG, ukuran maksimal 5MB per foto
+                    <div className="text-sm font-semibold text-[var(--ink-primary)]">
+                      Klik untuk pilih foto atau seret file ke area ini
+                    </div>
+                    <div className="text-xs text-[var(--ink-secondary)]">
+                      Maksimal 10 foto, format JPG/PNG/WebP, ukuran maksimal 5MB per foto
                     </div>
                   </label>
                 </div>
 
                 {selectedFiles && selectedFiles.length > 0 && (
                   <div className="space-y-4">
-                    <div className="text-sm text-gray-600">
-                      {selectedFiles.length} foto dipilih:
+                    <div className="text-xs font-semibold text-[var(--ink-secondary)]">
+                      <span className="font-mono-tabular">{selectedFiles.length}</span> foto dipilih:
                     </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-h-60 overflow-y-auto">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-h-60 overflow-y-auto">
                       {Array.from(selectedFiles).map((file, index) => (
-                        <div key={index} className="bg-white rounded-lg p-3 border border-gray-200">
+                        <div
+                          key={index}
+                          className="bg-[var(--bg-surface)] rounded-[12px] p-2.5 border border-[var(--border-stone)]"
+                        >
                           <div className="relative mb-2">
-                            <Image 
+                            <Image
                               src={URL.createObjectURL(file)}
                               alt={file.name}
                               width={100}
                               height={64}
-                              className="w-full h-16 object-cover rounded"
+                              className="w-full h-16 object-cover rounded-[8px]"
                               onLoad={(e) => {
-                                // Clean up object URL after image loads
                                 URL.revokeObjectURL(e.currentTarget.src);
                               }}
                             />
                           </div>
-                          <div className="text-xs text-gray-600 truncate">{file.name}</div>
-                          <div className="text-xs text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</div>
+                          <div className="text-xs text-[var(--ink-primary)] truncate">
+                            {file.name}
+                          </div>
+                          <div className="font-mono-tabular text-[11px] text-[var(--ink-secondary)]">
+                            {(file.size / 1024 / 1024).toFixed(2)} MB
+                          </div>
                         </div>
                       ))}
                     </div>
                     <button
+                      type="button"
                       onClick={handleUpload}
                       disabled={isUploading}
-                      className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed w-full"
+                      className="w-full py-3 px-6 rounded-[10px] text-sm font-semibold bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-primary-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                     >
-                      {isUploading ? 'Mengupload...' : 'Upload Foto'}
+                      {isUploading ? 'Mengunggah...' : 'Unggah Foto'}
                     </button>
                   </div>
                 )}
@@ -436,21 +445,27 @@ export default function SellerKosPhotosPage() {
             </div>
 
             {/* Current Photos */}
-            <div className="mb-8">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Foto Saat Ini ({photos.length} foto)
+            <div className="space-y-4">
+              <h3 className="text-base font-bold text-[var(--ink-primary)]">
+                Foto Saat Ini (<span className="font-mono-tabular">{photos.length}</span> foto)
               </h3>
-              
+
               {loadingPhotos ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {[...Array(3)].map((_, i) => (
-                    <div key={i} className="bg-gray-200 rounded-xl h-64 animate-pulse"></div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="bg-[var(--bg-muted)] rounded-[14px] h-64 animate-pulse"
+                    />
                   ))}
                 </div>
               ) : photos.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                   {photos.map((photo, index) => (
-                    <div key={photo.id} className="bg-gray-50 rounded-xl overflow-hidden border border-gray-200">
+                    <div
+                      key={photo.id}
+                      className="bg-[var(--bg-canvas)] rounded-[14px] overflow-hidden border border-[var(--border-stone)]"
+                    >
                       <div className="relative">
                         <Image
                           src={photo.url}
@@ -463,127 +478,93 @@ export default function SellerKosPhotosPage() {
                           }}
                         />
                         <div className="absolute top-3 right-3">
-                          <button 
+                          <button
+                            type="button"
                             onClick={() => handleDeletePhoto(photo.id)}
-                            className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-full transition-colors"
+                            className="h-8 w-8 rounded-full bg-[var(--accent-danger)] text-white hover:opacity-90 transition-opacity flex items-center justify-center cursor-pointer"
                             title="Hapus foto"
+                            aria-label="Hapus foto"
                           >
-                            🗑️
+                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                              <polyline points="3 6 5 6 21 6" />
+                              <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+                              <path d="M10 11v6" />
+                              <path d="M14 11v6" />
+                            </svg>
                           </button>
                         </div>
                         {photo.isPrimary && (
                           <div className="absolute top-3 left-3">
-                            <span className="bg-blue-600 text-white px-2 py-1 rounded text-xs font-semibold">
+                            <span className="bg-[var(--accent-primary)] text-white px-2.5 py-1 rounded-full text-[11px] font-semibold">
                               Foto Utama
                             </span>
                           </div>
                         )}
                       </div>
-                      <div className="p-4">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-gray-600">
+                      <div className="p-4 space-y-1.5">
+                        <div className="flex justify-between items-center gap-2">
+                          <span className="text-xs font-semibold text-[var(--ink-primary)] truncate">
                             {photo.caption || `Foto ${index + 1}`}
                           </span>
-                          <div className="flex space-x-2">
-                            {!photo.isPrimary && (
-                              <button 
-                                onClick={() => handleSetPrimary(photo.id)}
-                                className="text-xs bg-blue-100 text-blue-600 px-3 py-1 rounded hover:bg-blue-200 transition-colors"
-                              >
-                                Jadikan Utama
-                              </button>
-                            )}
-                          </div>
+                          {!photo.isPrimary && (
+                            <button
+                              type="button"
+                              onClick={() => handleSetPrimary(photo.id)}
+                              className="text-[11px] font-semibold bg-[var(--accent-tint)] text-[var(--accent-primary)] px-2.5 py-1 rounded-[8px] hover:bg-[var(--accent-primary)] hover:text-white transition-colors shrink-0 cursor-pointer"
+                            >
+                              Jadikan Utama
+                            </button>
+                          )}
                         </div>
-                        <div className="text-xs text-gray-400 mt-1">
-                          Upload: {new Date(photo.createdAt).toLocaleDateString('id-ID')}
+                        <div className="font-mono-tabular text-[11px] text-[var(--ink-secondary)]">
+                          Diunggah: {new Date(photo.createdAt).toLocaleDateString('id-ID')}
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-12 bg-gray-50 rounded-xl border border-gray-200">
-                  <div className="text-gray-300 text-6xl mb-4">📷</div>
-                  <h3 className="text-xl font-semibold text-gray-600 mb-2">Belum Ada Foto</h3>
-                  <p className="text-gray-500 mb-4">
-                    Upload foto pertama untuk membuat kos Anda lebih menarik bagi calon penyewa.
+                <div className="text-center py-12 bg-[var(--bg-canvas)] rounded-[16px] border border-[var(--border-stone)] space-y-2">
+                  <h3 className="text-base font-bold text-[var(--ink-primary)]">Belum Ada Foto</h3>
+                  <p className="text-xs sm:text-sm text-[var(--ink-secondary)] max-w-md mx-auto">
+                    Unggah foto kamar, kamar mandi, dan area bersama agar profil kos Anda lebih meyakinkan.
                   </p>
                 </div>
               )}
             </div>
 
             {/* Tips Section */}
-            <div className="bg-yellow-50 rounded-xl p-6 border border-yellow-200">
-              <h3 className="text-lg font-semibold text-yellow-900 mb-4">💡 Tips Foto yang Menarik</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-3">
-                  <div className="flex items-start space-x-3">
-                    <div className="w-6 h-6 bg-yellow-600 rounded-full flex items-center justify-center text-white text-xs font-bold">1</div>
-                    <div className="text-sm">
-                      <div className="font-medium text-yellow-900">Pencahayaan yang Baik</div>
-                      <div className="text-yellow-700">Gunakan cahaya alami atau lampu yang cukup terang</div>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <div className="w-6 h-6 bg-yellow-600 rounded-full flex items-center justify-center text-white text-xs font-bold">2</div>
-                    <div className="text-sm">
-                      <div className="font-medium text-yellow-900">Sudut yang Menampilkan Ruang</div>
-                      <div className="text-yellow-700">Ambil foto dari sudut yang memperlihatkan ukuran ruangan</div>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <div className="w-6 h-6 bg-yellow-600 rounded-full flex items-center justify-center text-white text-xs font-bold">3</div>
-                    <div className="text-sm">
-                      <div className="font-medium text-yellow-900">Ruangan yang Rapi</div>
-                      <div className="text-yellow-700">Pastikan ruangan bersih dan tertata rapi</div>
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  <div className="flex items-start space-x-3">
-                    <div className="w-6 h-6 bg-yellow-600 rounded-full flex items-center justify-center text-white text-xs font-bold">4</div>
-                    <div className="text-sm">
-                      <div className="font-medium text-yellow-900">Foto Fasilitas</div>
-                      <div className="text-yellow-700">Sertakan foto kamar mandi, dapur, dan area bersama</div>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <div className="w-6 h-6 bg-yellow-600 rounded-full flex items-center justify-center text-white text-xs font-bold">5</div>
-                    <div className="text-sm">
-                      <div className="font-medium text-yellow-900">Kualitas Tinggi</div>
-                      <div className="text-yellow-700">Upload foto dengan resolusi tinggi dan tidak blur</div>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <div className="w-6 h-6 bg-yellow-600 rounded-full flex items-center justify-center text-white text-xs font-bold">6</div>
-                    <div className="text-sm">
-                      <div className="font-medium text-yellow-900">Urutan yang Logis</div>
-                      <div className="text-yellow-700">Atur foto mulai dari kamar utama hingga fasilitas</div>
-                    </div>
-                  </div>
-                </div>
+            <div className="bg-[var(--bg-canvas)] rounded-[16px] p-6 border border-[var(--border-stone)]">
+              <h3 className="text-base font-bold text-[var(--ink-primary)] mb-4">
+                Panduan Foto Berkualitas
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs sm:text-sm text-[var(--ink-secondary)]">
+                <p>1. Gunakan cahaya alami di pagi atau siang hari agar ruangan terlihat jelas.</p>
+                <p>2. Ambil dari sudut ruangan untuk menampilkan luas kamar secara utuh.</p>
+                <p>3. Sertakan foto kamar mandi, parkir, dan area bersama.</p>
+                <p>4. Pilih foto kamar utama terbaik sebagai Foto Utama listing.</p>
               </div>
             </div>
 
             {/* Action Buttons */}
-            <div className="mt-8 flex justify-center space-x-4">
-              <button 
+            <div className="flex flex-wrap justify-center gap-3 pt-2">
+              <button
+                type="button"
                 onClick={() => router.push(`/seller/kos/${kosId}`)}
-                className="bg-gray-200 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                className="px-5 py-2.5 rounded-[10px] text-xs font-semibold border border-[var(--border-stone)] bg-[var(--bg-canvas)] text-[var(--ink-primary)] hover:border-[var(--ink-secondary)] transition-colors cursor-pointer"
               >
                 Kembali ke Detail
               </button>
-              <button 
-                onClick={() => router.push(`/kos/${kosId}`)}
-                className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              <button
+                type="button"
+                onClick={() => router.push(`/kos/${kosId}/view`)}
+                className="px-5 py-2.5 rounded-[10px] text-xs font-semibold bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-primary-hover)] transition-colors cursor-pointer"
               >
-                Lihat Sebagai Pengunjung
+                Lihat Halaman Publik
               </button>
             </div>
           </div>
         </main>
-        <Footer />
       </div>
     </ProtectedRoute>
   );

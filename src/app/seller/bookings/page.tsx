@@ -9,10 +9,14 @@ import { BookingCard } from '@/components/bookings/BookingCard';
 import { Pagination } from '@/components/ui/Pagination';
 import type { ApiResponse, BookingListData, BookingStatus } from '@/types';
 
-// Page size backend-defined; we rely on API pagination meta
-const STATUS_VALUES: (BookingStatus | 'all')[] = ['all','pending','confirmed','cancelled','completed'];
+const STATUS_VALUES: (BookingStatus | 'all')[] = [
+  'all',
+  'pending',
+  'confirmed',
+  'cancelled',
+  'completed',
+];
 
-// ---------------- Page ----------------
 function SellerBookingsPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -22,17 +26,18 @@ function SellerBookingsPageInner() {
   const [selectedStatus, setSelectedStatus] = useState<BookingStatus | 'all'>(statusParam);
   const [currentPage, setCurrentPage] = useState<number>(pageParam);
 
-  const { data, isLoading, error, refetch } = useBookings({ page: currentPage, status: selectedStatus === 'all' ? undefined : selectedStatus });
+  const { data, isLoading, error, refetch } = useBookings({
+    page: currentPage,
+    status: selectedStatus === 'all' ? undefined : selectedStatus,
+  });
   const updateBookingMutation = useUpdateBooking();
 
-  // Sync local state with URL changes (e.g., back/forward navigation)
   useEffect(() => {
     if (statusParam !== selectedStatus) setSelectedStatus(statusParam);
     if (pageParam !== currentPage) setCurrentPage(pageParam);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusParam, pageParam]);
 
-  // Update URL when filters/page change
   useEffect(() => {
     const params = new URLSearchParams();
     if (selectedStatus !== 'all') params.set('status', selectedStatus);
@@ -41,8 +46,7 @@ function SellerBookingsPageInner() {
     router.replace(`/seller/bookings${qs ? `?${qs}` : ''}`);
   }, [selectedStatus, currentPage, router]);
 
-  // Extract bookings list from API response
-  const response = data as (ApiResponse<BookingListData> | undefined);
+  const response = data as ApiResponse<BookingListData> | undefined;
   const bookings = response?.data?.bookings || [];
   const pagination = response?.data?.pagination;
 
@@ -50,11 +54,17 @@ function SellerBookingsPageInner() {
     const r = await showConfirm('Konfirmasi booking ini?', 'Konfirmasi', 'Ya', 'Batal');
     if (r.isConfirmed) updateBookingMutation.mutate({ id, status: 'confirmed' });
   };
+
   const handleCancel = async (id: number) => {
     const r = await showConfirm('Batalkan booking ini?', 'Konfirmasi', 'Ya', 'Batal');
-    if (r.isConfirmed) updateBookingMutation.mutate({ id, status: 'cancelled', notes: 'Booking dibatalkan oleh pemilik' });
+    if (r.isConfirmed) {
+      updateBookingMutation.mutate({
+        id,
+        status: 'cancelled',
+        notes: 'Booking dibatalkan oleh pemilik',
+      });
+    }
   };
-
 
   const onPageChange = (p: number) => {
     if (p < 1 || (pagination && p > pagination.totalPages)) return;
@@ -63,13 +73,11 @@ function SellerBookingsPageInner() {
 
   if (isLoading) {
     return (
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="bg-white rounded-2xl shadow-lg p-10">
-          <div className="space-y-4 animate-pulse">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-24 bg-gray-200 rounded-lg" />
-            ))}
-          </div>
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="bg-[var(--bg-surface)] border border-[var(--border-stone)] rounded-[20px] p-8 animate-pulse space-y-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-28 bg-[var(--bg-muted)] rounded-[14px]" />
+          ))}
         </div>
       </div>
     );
@@ -77,74 +85,120 @@ function SellerBookingsPageInner() {
 
   if (error) {
     return (
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="bg-white rounded-2xl shadow-lg p-10 text-center text-red-500">
-          Gagal memuat data bookings. <button onClick={() => refetch()} className="underline">Coba lagi</button>
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="bg-[var(--bg-surface)] border border-[var(--border-stone)] rounded-[20px] p-8 text-center text-sm text-[var(--accent-danger)]">
+          Gagal memuat data booking.{' '}
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="underline font-semibold cursor-pointer"
+          >
+            Coba lagi
+          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <div className="bg-white rounded-2xl shadow-lg p-8">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="bg-[var(--bg-surface)] border border-[var(--border-stone)] rounded-[20px] p-6 sm:p-8 space-y-6">
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 pb-5 border-b border-[var(--border-stone)]">
           <div>
-            <h1 className="text-3xl font-bold text-blue-600 mb-2">Bookings Kos Saya</h1>
-            <p className="text-gray-600">Kelola permintaan booking pada kos Anda</p>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--ink-primary)]">
+              Booking Kos Saya
+            </h1>
+            <p className="text-sm text-[var(--ink-secondary)] mt-1">
+              Tinjau dan konfirmasi pengajuan sewa kamar dari calon penyewa.
+            </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2.5">
             <button
+              type="button"
               onClick={() => router.push('/seller/dashboard')}
-              className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-300 transition-colors"
-            >Dashboard</button>
+              className="px-4 py-2 rounded-[10px] border border-[var(--border-stone)] bg-[var(--bg-canvas)] text-xs font-semibold text-[var(--ink-primary)] hover:border-[var(--ink-secondary)] transition-colors cursor-pointer"
+            >
+              Dashboard
+            </button>
             <button
+              type="button"
               onClick={() => refetch()}
-              className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors"
-            >Refresh</button>
+              className="px-4 py-2 rounded-[10px] bg-[var(--accent-primary)] text-white text-xs font-semibold hover:bg-[var(--accent-primary-hover)] transition-colors cursor-pointer"
+            >
+              Refresh
+            </button>
           </div>
         </div>
 
-        {/* Status Filters */}
-        <div className="mb-6 flex flex-wrap gap-2">
-          {STATUS_VALUES.map(st => {
-            const count = bookings.filter(b=>b.status===st).length;
-            const labelMap: Record<string,string> = {
-              all: `Semua (${pagination?.totalBookings ?? bookings.length})`,
-              pending: `Menunggu${st==='pending' ? ` (${count})` : ''}`,
-              confirmed: `Dikonfirmasi${st==='confirmed' ? ` (${count})` : ''}`,
-              cancelled: `Dibatalkan${st==='cancelled' ? ` (${count})` : ''}`,
-              completed: `Selesai${st==='completed' ? ` (${count})` : ''}`
+        <div className="flex flex-wrap gap-2">
+          {STATUS_VALUES.map((st) => {
+            const count = bookings.filter((b) => b.status === st).length;
+            const totalAll = pagination?.totalBookings ?? bookings.length;
+            const labelMap: Record<string, string> = {
+              all: 'Semua',
+              pending: 'Menunggu',
+              confirmed: 'Dikonfirmasi',
+              cancelled: 'Dibatalkan',
+              completed: 'Selesai',
             };
+            const badgeCount = st === 'all' ? totalAll : selectedStatus === st ? count : null;
+
             return (
               <button
                 key={st}
-                onClick={() => { setCurrentPage(1); setSelectedStatus(st); }}
+                type="button"
+                onClick={() => {
+                  setCurrentPage(1);
+                  setSelectedStatus(st);
+                }}
                 className={cn(
-                  'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+                  'inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold border transition-colors cursor-pointer',
                   selectedStatus === st
-                    ? 'bg-blue-600 text-white shadow'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    ? 'bg-[var(--accent-primary)] text-white border-[var(--accent-primary)]'
+                    : 'bg-[var(--bg-muted)] text-[var(--ink-secondary)] border-[var(--border-stone)] hover:text-[var(--ink-primary)]'
                 )}
-              >{labelMap[st]}</button>
+              >
+                <span>{labelMap[st]}</span>
+                {badgeCount !== null && (
+                  <span className="font-mono-tabular opacity-90">({badgeCount})</span>
+                )}
+              </button>
             );
           })}
         </div>
 
-        {/* Empty State or List */}
         {bookings.length === 0 ? (
-          <div className="text-center py-16">
-            <div className="text-6xl mb-4">📭</div>
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">
-              {selectedStatus === 'all' ? 'Belum ada booking' : 'Tidak ada booking untuk status ini'}
+          <div className="text-center py-14 px-4 space-y-3">
+            <div className="h-12 w-12 mx-auto rounded-full bg-[var(--accent-tint)] text-[var(--accent-primary)] flex items-center justify-center">
+              <svg
+                className="w-5 h-5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.75}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                <line x1="16" y1="2" x2="16" y2="6" />
+                <line x1="8" y1="2" x2="8" y2="6" />
+                <line x1="3" y1="10" x2="21" y2="10" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-bold text-[var(--ink-primary)]">
+              {selectedStatus === 'all'
+                ? 'Belum ada booking'
+                : 'Tidak ada booking untuk status ini'}
             </h3>
-            <p className="text-gray-500 mb-4">Promosikan kos Anda untuk mendapatkan booking baru.</p>
+            <p className="text-sm text-[var(--ink-secondary)]">
+              Lengkapi foto dan fasilitas kos untuk menarik lebih banyak calon penyewa.
+            </p>
           </div>
         ) : (
           <>
-            <div className="space-y-6">
-              {bookings.map(b => (
+            <div className="space-y-4">
+              {bookings.map((b) => (
                 <BookingCard
                   key={b.id}
                   booking={b}
@@ -153,7 +207,7 @@ function SellerBookingsPageInner() {
                   actions={{
                     onConfirm: handleConfirm,
                     onCancel: handleCancel,
-                    onDetail: (id) => router.push(`/seller/bookings/${id}`)
+                    onDetail: (id) => router.push(`/seller/bookings/${id}`),
                   }}
                 />
               ))}
@@ -174,7 +228,13 @@ function SellerBookingsPageInner() {
 
 export default function SellerBookingsPage() {
   return (
-    <Suspense fallback={<div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10"><div className="text-gray-600">Loading...</div></div>}>
+    <Suspense
+      fallback={
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+          <div className="text-sm text-[var(--ink-secondary)]">Memuat daftar booking...</div>
+        </div>
+      }
+    >
       <SellerBookingsPageInner />
     </Suspense>
   );

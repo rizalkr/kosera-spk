@@ -8,17 +8,21 @@ export interface StatCardProps {
   extra?: React.ReactNode;
 }
 
-const colorMap: Record<string, string> = {
-  blue: 'bg-blue-50 border-blue-200 text-blue-600',
-  green: 'bg-green-50 border-green-200 text-green-600',
-  purple: 'bg-purple-50 border-purple-200 text-purple-600',
-  yellow: 'bg-yellow-50 border-yellow-200 text-yellow-600',
+const valueColorMap: Record<string, string> = {
+  blue: 'text-[var(--ink-primary)]',
+  green: 'text-[var(--accent-primary)]',
+  purple: 'text-[var(--accent-primary)]',
+  yellow: 'text-[var(--accent-spark)]',
 };
 
 export const StatCard: React.FC<StatCardProps> = ({ value, label, color = 'blue', extra }) => (
-  <div className={cn('rounded-xl p-6 border', colorMap[color])}>
-    <div className="text-3xl font-bold">{value}</div>
-    <div className="text-sm mt-1">{label}</div>
-    {extra && <div className="text-xs mt-2">{extra}</div>}
+  <div className="rounded-[14px] p-5 bg-[var(--bg-canvas)] border border-[var(--border-stone)]">
+    <div className={cn('font-mono-tabular text-2xl font-bold', valueColorMap[color])}>{value}</div>
+    <div className="text-xs font-medium text-[var(--ink-secondary)] mt-1">{label}</div>
+    {extra && (
+      <div className="font-mono-tabular text-[11px] font-semibold text-[var(--ink-secondary)] mt-1.5">
+        {extra}
+      </div>
+    )}
   </div>
 );

@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { CompareProvider } from '@/contexts/CompareContext';
 import GlobalCompareDock from '@/components/features/compare/GlobalCompareDock';
+import KoseraChatWidget from '@/components/features/chat/KoseraChatWidget';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -33,6 +34,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         <CompareProvider>
           {children}
           <GlobalCompareDock />
+          <KoseraChatWidget />
         </CompareProvider>
       </AuthProvider>
       <ReactQueryDevtools initialIsOpen={false} />

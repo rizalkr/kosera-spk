@@ -8,20 +8,25 @@
  */
 
 import { NextResponse } from 'next/server';
-import { checkHealth, getIndexingStats } from '@/lib/ai';
+import { checkHealth, checkLLMHealth, getIndexingStats } from '@/lib/ai';
 
 export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/ai/health
  * 
- * Check AI service health status
+ * Check AI service health status (embedding service + optional LLM chat server)
  */
 export async function GET() {
+  const llmPromise = checkLLMHealth();
+
   try {
-    // Check AI service health
-    const health = await checkHealth();
-    const stats = await getIndexingStats();
+    // Check AI embedding service health
+    const [health, stats, llm] = await Promise.all([
+      checkHealth(),
+      getIndexingStats(),
+      llmPromise,
+    ]);
 
     return NextResponse.json({
       status: 'online',
@@ -34,13 +39,16 @@ export async function GET() {
           ? Math.round((stats.indexed / stats.total) * 100) 
           : 0,
       },
+      llm,
     });
   } catch {
+    const llm = await llmPromise;
     return NextResponse.json({
       status: 'offline',
       model: null,
       dimension: null,
       indexing: null,
+      llm,
     });
   }
 }

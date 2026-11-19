@@ -135,39 +135,48 @@ export default function PhotoUploadForm({
 
   if (!isAuthenticated) {
     return (
-      <div className="bg-gray-50 rounded-lg p-6 text-center">
-        <p className="text-gray-600">Login terlebih dahulu untuk upload foto</p>
+      <div className="bg-[var(--bg-canvas)] border border-[var(--border-stone)] rounded-[14px] p-6 text-center">
+        <p className="text-sm text-[var(--ink-secondary)]">Login terlebih dahulu untuk mengunggah foto</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg border p-6">
-      <h3 className="text-lg font-semibold text-gray-800 mb-4">Upload Foto Kos</h3>
-      
+    <div className="bg-[var(--bg-surface)] rounded-[16px] border border-[var(--border-stone)] p-6">
+      <h3 className="text-base font-bold text-[var(--ink-primary)] mb-4">Unggah Foto Kos</h3>
+
       {/* Drag and Drop Area */}
       <div
-        className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-          dragActive 
-            ? 'border-blue-400 bg-blue-50' 
-            : 'border-gray-300 hover:border-gray-400'
+        className={`border-2 border-dashed rounded-[14px] p-8 text-center transition-colors ${
+          dragActive
+            ? 'border-[var(--accent-primary)] bg-[var(--accent-tint)]'
+            : 'border-[var(--border-stone)] bg-[var(--bg-canvas)] hover:border-[var(--accent-primary)]'
         }`}
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
         onDragOver={handleDrag}
         onDrop={handleDrop}
       >
-        <div className="text-gray-400 text-4xl mb-4">📁</div>
-        <p className="text-gray-600 mb-2">
-          Drag & drop foto di sini atau{' '}
-          <label htmlFor="photo-upload" className="text-blue-600 hover:underline cursor-pointer">
+        <div className="h-12 w-12 mx-auto mb-3 rounded-full bg-[var(--accent-tint)] text-[var(--accent-primary)] flex items-center justify-center">
+          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" y1="3" x2="12" y2="15" />
+          </svg>
+        </div>
+        <p className="text-sm text-[var(--ink-primary)] mb-1.5">
+          Seret foto ke sini atau{' '}
+          <label
+            htmlFor="photo-upload"
+            className="font-semibold text-[var(--accent-primary)] hover:underline cursor-pointer"
+          >
             pilih file
           </label>
         </p>
-        <p className="text-sm text-gray-500">
-          Support: JPG, PNG, WebP (max 5MB per file)
+        <p className="text-xs text-[var(--ink-secondary)]">
+          Mendukung JPG, PNG, WebP (maks. 5MB per file)
         </p>
-        
+
         <input
           id="photo-upload"
           type="file"
@@ -181,19 +190,25 @@ export default function PhotoUploadForm({
       {/* Selected Files */}
       {files && files.length > 0 && (
         <div className="mt-4">
-          <h4 className="font-medium text-gray-700 mb-2">File terpilih:</h4>
+          <h4 className="text-xs font-semibold text-[var(--ink-primary)] mb-2">File terpilih:</h4>
           <div className="space-y-2">
             {Array.from(files).map((file, index) => (
-              <div key={index} className="flex items-center justify-between bg-gray-50 rounded p-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600">{file.name}</span>
-                  <span className="text-xs text-gray-400">
+              <div
+                key={index}
+                className="flex items-center justify-between bg-[var(--bg-canvas)] border border-[var(--border-stone)] rounded-[10px] px-3 py-2"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-xs font-medium text-[var(--ink-primary)] truncate">
+                    {file.name}
+                  </span>
+                  <span className="font-mono-tabular text-[11px] text-[var(--ink-secondary)] shrink-0">
                     ({(file.size / 1024 / 1024).toFixed(2)} MB)
                   </span>
                 </div>
                 <button
+                  type="button"
                   onClick={() => removeFile(index)}
-                  className="text-red-500 hover:text-red-700 text-sm"
+                  className="text-xs font-semibold text-[var(--accent-danger)] hover:underline cursor-pointer"
                 >
                   Hapus
                 </button>
@@ -206,27 +221,30 @@ export default function PhotoUploadForm({
       {/* Options */}
       {files && files.length > 0 && (
         <div className="mt-4 flex items-center gap-4">
-          <label className="flex items-center gap-2">
+          <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
               checked={isPrimary}
               onChange={(e) => setIsPrimary(e.target.checked)}
-              className="rounded"
+              className="rounded accent-[var(--accent-primary)]"
             />
-            <span className="text-sm text-gray-600">Set sebagai foto utama</span>
+            <span className="text-xs font-medium text-[var(--ink-primary)]">
+              Jadikan sebagai foto utama
+            </span>
           </label>
         </div>
       )}
 
       {/* Upload Button */}
       {files && files.length > 0 && (
-        <div className="mt-6">
+        <div className="mt-5">
           <button
+            type="button"
             onClick={handleUpload}
             disabled={isUploading}
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-[var(--accent-primary)] text-white py-2.5 px-4 rounded-[10px] text-sm font-semibold hover:bg-[var(--accent-primary-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
-            {isUploading ? 'Uploading...' : `Upload ${files.length} foto`}
+            {isUploading ? 'Mengunggah...' : `Unggah ${files.length} foto`}
           </button>
         </div>
       )}

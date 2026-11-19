@@ -1,8 +1,6 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import Header from '@/components/layouts/Header';
-import Footer from '@/components/layouts/Footer';
 import ProtectedRoute from '@/components/layouts/ProtectedRoute';
 import { useSellerKosDetailView } from '@/hooks/seller/kos/useSellerKosDetailView';
 import { SellerKosDetailLoading } from '@/components/features/seller/kos/detail/atoms/LoadingSkeleton';
@@ -15,34 +13,49 @@ import { SellerKosTab } from '@/hooks/seller/kos/useSellerKosDetailView';
 
 function SellerKosDetailPage() {
   const router = useRouter();
-  const { kos, isLoading, error, activeTab, setActiveTab, isRefreshing, handleRefresh, statistics, occupancyRate, formatCurrency, formatDate, getKosStatus, refetch } = useSellerKosDetailView();
+  const {
+    kos,
+    isLoading,
+    error,
+    activeTab,
+    setActiveTab,
+    isRefreshing,
+    handleRefresh,
+    statistics,
+    occupancyRate,
+    formatCurrency,
+    formatDate,
+    getKosStatus,
+    refetch,
+  } = useSellerKosDetailView();
 
   if (isLoading) {
     return (
       <ProtectedRoute requireAuth={true} allowedRoles={['SELLER']}>
-        <div className="min-h-screen bg-[#A9E4DE] pt-20">
-          <Header />
+        <div className="min-h-[100dvh] bg-[var(--bg-canvas)]">
           <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <SellerKosDetailLoading />
           </main>
-          <Footer />
         </div>
       </ProtectedRoute>
     );
   }
+
   if (error || !kos) {
     return (
       <ProtectedRoute requireAuth={true} allowedRoles={['SELLER']}>
-        <div className="min-h-screen bg-[#A9E4DE] pt-20">
-          <Header />
+        <div className="min-h-[100dvh] bg-[var(--bg-canvas)]">
           <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <SellerKosDetailError
-              message={error ? 'Terjadi kesalahan saat mengambil detail kos.' : 'Kos tidak ditemukan atau Anda tidak memiliki akses.'}
+              message={
+                error
+                  ? 'Terjadi kesalahan saat mengambil detail kos.'
+                  : 'Kos tidak ditemukan atau Anda tidak memiliki akses.'
+              }
               onRetry={() => refetch()}
               onBack={() => router.push('/seller/kos')}
             />
           </main>
-          <Footer />
         </div>
       </ProtectedRoute>
     );
@@ -52,10 +65,9 @@ function SellerKosDetailPage() {
 
   return (
     <ProtectedRoute requireAuth={true} allowedRoles={['SELLER']}>
-      <div className="min-h-screen bg-[#A9E4DE] pt-20">
-        <Header />
+      <div className="min-h-[100dvh] bg-[var(--bg-canvas)]">
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+          <div className="bg-[var(--bg-surface)] border border-[var(--border-stone)] rounded-[20px] overflow-hidden">
             <HeaderSection
               kos={kos}
               status={status}
@@ -67,7 +79,7 @@ function SellerKosDetailPage() {
               isRefreshing={isRefreshing}
             />
             <TabsNav activeTab={activeTab} onChange={setActiveTab} />
-            <div className="p-8">
+            <div className="p-6 sm:p-8">
               {activeTab === 'overview' && (
                 <OverviewTab
                   kos={kos}
@@ -78,17 +90,27 @@ function SellerKosDetailPage() {
                 />
               )}
               {activeTab !== 'overview' && activeTab !== 'settings' && (
-                <PlaceholderTab type={activeTab as Exclude<SellerKosTab, 'overview'>} statistics={statistics} occupancyRate={occupancyRate} viewCount={statistics.totalViews} />
+                <PlaceholderTab
+                  type={activeTab as Exclude<SellerKosTab, 'overview'>}
+                  statistics={statistics}
+                  occupancyRate={occupancyRate}
+                  viewCount={statistics.totalViews}
+                />
               )}
               {activeTab === 'settings' && (
-                <PlaceholderTab type="settings" statistics={statistics} occupancyRate={occupancyRate} viewCount={statistics.totalViews} />
+                <PlaceholderTab
+                  type="settings"
+                  statistics={statistics}
+                  occupancyRate={occupancyRate}
+                  viewCount={statistics.totalViews}
+                />
               )}
             </div>
           </div>
         </main>
-        <Footer />
       </div>
     </ProtectedRoute>
   );
-};
+}
+
 export default SellerKosDetailPage;

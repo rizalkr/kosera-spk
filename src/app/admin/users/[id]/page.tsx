@@ -52,17 +52,33 @@ function UserDetailPage() {
 
   return (
     <ProtectedRoute requireAuth={true} allowedRoles={['ADMIN']}>
-      <div className="min-h-screen bg-[#A9E4DE] pt-20">
+      <div className="min-h-[100dvh] bg-[var(--bg-canvas)] pt-16 flex flex-col">
         <Header />
-        <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <main className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 pb-5 border-b border-[var(--border-stone)]">
             <div>
-              <h1 className="text-3xl font-bold text-blue-600 mb-2">Detail User</h1>
-              <p className="text-gray-600">Informasi lengkap user #{user.id}</p>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--ink-primary)]">
+                Detail User
+              </h1>
+              <p className="text-sm text-[var(--ink-secondary)] mt-1">
+                Informasi lengkap user <span className="font-mono-tabular">#{user.id}</span>
+              </p>
             </div>
-            <div className="flex gap-3">
-              <button onClick={() => router.push(`/admin/users/${user.id}/edit`)} className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"><span>✏️</span>Edit User</button>
-              <button onClick={() => router.push('/admin/users')} className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors">← Kembali</button>
+            <div className="flex flex-wrap gap-2.5">
+              <button
+                type="button"
+                onClick={() => router.push(`/admin/users/${user.id}/edit`)}
+                className="px-4 py-2 rounded-[10px] text-xs font-semibold bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-primary-hover)] transition-colors cursor-pointer"
+              >
+                Edit User
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push('/admin/users')}
+                className="px-4 py-2 rounded-[10px] text-xs font-semibold border border-[var(--border-stone)] bg-[var(--bg-surface)] text-[var(--ink-primary)] hover:border-[var(--ink-secondary)] transition-colors cursor-pointer"
+              >
+                Kembali
+              </button>
             </div>
           </div>
           <UserDetailCard
