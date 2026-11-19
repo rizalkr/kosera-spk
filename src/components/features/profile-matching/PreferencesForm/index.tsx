@@ -10,18 +10,12 @@ import { FacilitiesSection } from './FacilitiesSection';
 import { WeightSection, getTotalWeight } from './WeightSection';
 import { RoomSection } from './RoomSection';
 
-/**
- * Props for PreferencesForm component
- */
 interface PreferencesFormProps {
   onSuccess?: () => void;
   onCancel?: () => void;
   className?: string;
 }
 
-/**
- * Default form values
- */
 const DEFAULT_FORM_DATA: UserPreferencesInput = {
   budgetMin: null,
   budgetMax: null,
@@ -42,13 +36,11 @@ const DEFAULT_FORM_DATA: UserPreferencesInput = {
 
 /**
  * Form component for setting user preferences for profile matching
- * Refactored to use modular section components
  */
 export const PreferencesForm = ({ onSuccess, onCancel, className = '' }: PreferencesFormProps) => {
   const { preferences, isLoading, savePreferences, isSaving } = usePreferencesManager();
   const [formData, setFormData] = useState<UserPreferencesInput>(DEFAULT_FORM_DATA);
 
-  // Initialize form with existing preferences
   useEffect(() => {
     if (preferences) {
       setFormData({
@@ -71,15 +63,12 @@ export const PreferencesForm = ({ onSuccess, onCancel, className = '' }: Prefere
     }
   }, [preferences]);
 
-  // Handle partial form data changes
   const handleChange = useCallback((partial: Partial<UserPreferencesInput>) => {
     setFormData((prev) => ({ ...prev, ...partial }));
   }, []);
 
-  // Calculate total weight
   const totalWeight = getTotalWeight(formData);
 
-  // Handle form submit
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -100,17 +89,17 @@ export const PreferencesForm = ({ onSuccess, onCancel, className = '' }: Prefere
 
   if (isLoading) {
     return (
-      <div className="animate-pulse p-6 space-y-4">
-        <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-        <div className="h-12 bg-gray-200 rounded"></div>
-        <div className="h-12 bg-gray-200 rounded"></div>
-        <div className="h-24 bg-gray-200 rounded"></div>
+      <div className="bg-[var(--bg-surface)] border border-[var(--border-stone)] rounded-[16px] p-6 animate-pulse space-y-4">
+        <div className="h-6 bg-[var(--bg-muted)] rounded w-1/3" />
+        <div className="h-12 bg-[var(--bg-muted)] rounded-[10px]" />
+        <div className="h-12 bg-[var(--bg-muted)] rounded-[10px]" />
+        <div className="h-28 bg-[var(--bg-muted)] rounded-[12px]" />
       </div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className={`space-y-6 ${className}`}>
+    <form onSubmit={handleSubmit} className={`space-y-5 ${className}`}>
       <BudgetSection formData={formData} onChange={handleChange} />
 
       <LocationSection
@@ -126,12 +115,11 @@ export const PreferencesForm = ({ onSuccess, onCancel, className = '' }: Prefere
 
       <WeightSection formData={formData} onChange={handleChange} />
 
-      {/* Action Buttons */}
-      <div className="flex gap-4">
+      <div className="flex flex-wrap gap-3 pt-1">
         <button
           type="submit"
           disabled={isSaving || totalWeight !== 100}
-          className="flex-1 bg-blue-500 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 min-w-[180px] py-3 px-6 rounded-[10px] text-sm font-semibold bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-primary-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
           {isSaving ? 'Menyimpan...' : 'Simpan Preferensi'}
         </button>
@@ -139,7 +127,7 @@ export const PreferencesForm = ({ onSuccess, onCancel, className = '' }: Prefere
           <button
             type="button"
             onClick={onCancel}
-            className="px-6 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            className="px-6 py-3 rounded-[10px] text-sm font-medium border border-[var(--border-stone)] bg-[var(--bg-surface)] text-[var(--ink-primary)] hover:bg-[var(--bg-muted)] transition-colors cursor-pointer"
           >
             Batal
           </button>

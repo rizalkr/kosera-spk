@@ -7,9 +7,27 @@ import { useState, useEffect } from 'react';
 export interface LoginRequiredProps {
   children: React.ReactNode;
   fallback?: React.ReactNode;
-  redirectTo?: string; // login page path
-  showModal?: boolean; // show inline modal instead of redirect
+  redirectTo?: string;
+  showModal?: boolean;
 }
+
+const LockBadgeIcon = () => (
+  <div className="h-12 w-12 mx-auto rounded-full bg-[var(--accent-tint)] text-[var(--accent-primary)] flex items-center justify-center">
+    <svg
+      className="w-5 h-5"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </svg>
+  </div>
+);
 
 export const LoginRequired = ({
   children,
@@ -40,14 +58,20 @@ export const LoginRequired = ({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-4">
-        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" />
+      <div className="min-h-[100dvh] bg-[var(--bg-canvas)] flex items-center justify-center p-4">
+        <div
+          role="status"
+          aria-live="polite"
+          className="bg-[var(--bg-surface)] border border-[var(--border-stone)] rounded-[16px] px-7 py-5 flex items-center gap-3"
+        >
+          <div className="h-5 w-5 rounded-full border-2 border-[var(--border-stone)] border-t-[var(--accent-primary)] animate-spin" />
+          <span className="text-sm font-medium text-[var(--ink-secondary)]">Memuat sesi...</span>
+        </div>
       </div>
     );
   }
 
   if (!isAuthenticated) {
-    // Modal variant
     if (showModal) {
       return (
         <>
@@ -57,27 +81,28 @@ export const LoginRequired = ({
       );
     }
 
-    // Fallback UI (custom) without automatic redirect
     if (fallback) {
       return <>{fallback}</>;
     }
 
-    // Redirect spinner state
     if (redirectInitiated) {
       return (
-        <div className="flex items-center justify-center p-8">
-          <div className="text-center text-gray-600">Mengalihkan ke halaman login...</div>
+        <div className="min-h-[100dvh] bg-[var(--bg-canvas)] flex items-center justify-center px-4">
+          <div className="bg-[var(--bg-surface)] border border-[var(--border-stone)] rounded-[20px] p-8 max-w-sm w-full text-center space-y-3">
+            <LockBadgeIcon />
+            <h2 className="text-lg font-semibold text-[var(--ink-primary)]">Login Diperlukan</h2>
+            <p className="text-sm text-[var(--ink-secondary)]">Mengalihkan ke halaman masuk...</p>
+          </div>
         </div>
       );
     }
 
-    // Initial prompt (will quickly transition to redirect spinner)
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-center">
-          <div className="text-6xl mb-4">🔒</div>
-          <h2 className="text-xl font-semibold mb-2">Login Diperlukan</h2>
-          <p className="text-gray-600 mb-4">Mengalihkan ke halaman login...</p>
+      <div className="min-h-[100dvh] bg-[var(--bg-canvas)] flex items-center justify-center px-4">
+        <div className="bg-[var(--bg-surface)] border border-[var(--border-stone)] rounded-[20px] p-8 max-w-sm w-full text-center space-y-3">
+          <LockBadgeIcon />
+          <h2 className="text-lg font-semibold text-[var(--ink-primary)]">Login Diperlukan</h2>
+          <p className="text-sm text-[var(--ink-secondary)]">Mengalihkan ke halaman masuk...</p>
         </div>
       </div>
     );
@@ -86,31 +111,61 @@ export const LoginRequired = ({
   return <>{children}</>;
 };
 
-// Modal login untuk inline actions
 const LoginModal = ({ onClose }: { onClose: () => void }) => {
   const router = useRouter();
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-md mx-4">
-        <div className="text-center">
-          <div className="text-5xl mb-4">🔐</div>
-          <h3 className="text-lg font-semibold mb-2">Login Diperlukan</h3>
-          <p className="text-gray-600 mb-6">Anda perlu login untuk menggunakan fitur ini</p>
-          <div className="flex space-x-3">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="login-required-modal-title"
+      onClick={onClose}
+      className="fixed inset-0 bg-[var(--ink-primary)]/45 backdrop-blur-xs flex items-center justify-center z-50 p-4"
+    >
+      <div
+        onClick={(event) => event.stopPropagation()}
+        className="bg-[var(--bg-surface)] border border-[var(--border-stone)] rounded-[20px] p-6 sm:p-7 max-w-md w-full shadow-[var(--shadow-float)]"
+      >
+        <div className="text-center space-y-4">
+          <LockBadgeIcon />
+          <div className="space-y-1.5">
+            <h3
+              id="login-required-modal-title"
+              className="text-lg font-semibold text-[var(--ink-primary)]"
+            >
+              Login Diperlukan
+            </h3>
+            <p className="text-sm text-[var(--ink-secondary)]">
+              Anda perlu masuk ke akun Kosera untuk menggunakan fitur ini.
+            </p>
+          </div>
+          <div className="flex gap-3 pt-2">
             <button
+              type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex-1 px-4 py-2.5 rounded-[10px] text-sm font-medium border border-[var(--border-stone)] bg-[var(--bg-surface)] text-[var(--ink-primary)] hover:bg-[var(--bg-muted)] transition-colors cursor-pointer"
             >
               Batal
             </button>
             <button
+              type="button"
               onClick={() => {
                 onClose();
                 router.push('/auth/login');
               }}
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="flex-1 px-4 py-2.5 rounded-[10px] text-sm font-semibold bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-primary-hover)] transition-colors cursor-pointer"
             >
-              Login
+              Masuk
             </button>
           </div>
         </div>

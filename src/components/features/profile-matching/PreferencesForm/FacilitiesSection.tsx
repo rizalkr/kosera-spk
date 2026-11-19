@@ -14,7 +14,6 @@ export const FacilitiesSection = ({ formData, onChange }: SectionProps) => {
     if (current.includes(facility)) {
       onChange({ requiredFacilities: current.filter((f) => f !== facility) });
     } else {
-      // Remove from optional if present, add to required
       onChange({
         requiredFacilities: [...current, facility],
         optionalFacilities: optional.filter((f) => f !== facility),
@@ -26,7 +25,6 @@ export const FacilitiesSection = ({ formData, onChange }: SectionProps) => {
     const current = formData.optionalFacilities ?? [];
     const required = formData.requiredFacilities ?? [];
 
-    // Don't add to optional if already required
     if (required.includes(facility)) return;
 
     if (current.includes(facility)) {
@@ -37,50 +35,67 @@ export const FacilitiesSection = ({ formData, onChange }: SectionProps) => {
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-sm border">
-      <h3 className="text-lg font-semibold text-gray-800 mb-4">Fasilitas</h3>
-
-      <div className="mb-4">
-        <p className="text-sm font-medium text-gray-700 mb-2">Fasilitas Wajib (harus ada):</p>
-        <div className="flex flex-wrap gap-2">
-          {AVAILABLE_FACILITIES.map((facility) => (
-            <button
-              key={`req-${facility}`}
-              type="button"
-              onClick={() => toggleRequiredFacility(facility)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                formData.requiredFacilities?.includes(facility)
-                  ? 'bg-green-500 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              {facility}
-            </button>
-          ))}
-        </div>
+    <section className="bg-[var(--bg-surface)] border border-[var(--border-stone)] rounded-[16px] p-5 sm:p-6 space-y-5">
+      <div>
+        <h3 className="text-base font-bold text-[var(--ink-primary)]">Fasilitas</h3>
+        <p className="text-xs text-[var(--ink-secondary)] mt-0.5">
+          Bedakan fasilitas yang wajib tersedia dan fasilitas pendukung opsional.
+        </p>
       </div>
 
       <div>
-        <p className="text-sm font-medium text-gray-700 mb-2">Fasilitas Opsional (nice to have):</p>
+        <p className="text-xs font-semibold text-[var(--ink-primary)] mb-2">
+          Fasilitas Wajib (harus tersedia):
+        </p>
         <div className="flex flex-wrap gap-2">
-          {AVAILABLE_FACILITIES.filter((f) => !formData.requiredFacilities?.includes(f)).map(
-            (facility) => (
+          {AVAILABLE_FACILITIES.map((facility) => {
+            const active = Boolean(formData.requiredFacilities?.includes(facility));
+            return (
               <button
-                key={`opt-${facility}`}
+                key={`req-${facility}`}
                 type="button"
-                onClick={() => toggleOptionalFacility(facility)}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                  formData.optionalFacilities?.includes(facility)
-                    ? 'bg-yellow-500 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                aria-pressed={active}
+                onClick={() => toggleRequiredFacility(facility)}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors cursor-pointer ${
+                  active
+                    ? 'bg-[var(--accent-primary)] text-white border-[var(--accent-primary)]'
+                    : 'bg-[var(--bg-muted)] text-[var(--ink-primary)] border-[var(--border-stone)] hover:border-[var(--ink-secondary)]'
                 }`}
               >
                 {facility}
               </button>
-            )
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="pt-3 border-t border-[var(--border-stone)]">
+        <p className="text-xs font-semibold text-[var(--ink-primary)] mb-2">
+          Fasilitas Opsional (nilai tambah):
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {AVAILABLE_FACILITIES.filter((f) => !formData.requiredFacilities?.includes(f)).map(
+            (facility) => {
+              const active = Boolean(formData.optionalFacilities?.includes(facility));
+              return (
+                <button
+                  key={`opt-${facility}`}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => toggleOptionalFacility(facility)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors cursor-pointer ${
+                    active
+                      ? 'bg-[var(--accent-spark)] text-white border-[var(--accent-spark)]'
+                      : 'bg-[var(--bg-muted)] text-[var(--ink-primary)] border-[var(--border-stone)] hover:border-[var(--ink-secondary)]'
+                  }`}
+                >
+                  {facility}
+                </button>
+              );
+            }
           )}
         </div>
       </div>
-    </div>
+    </section>
   );
 };

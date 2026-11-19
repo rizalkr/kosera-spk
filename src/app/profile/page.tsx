@@ -6,13 +6,11 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import Header from '@/components/layouts/Header';
+import Footer from '@/components/layouts/Footer';
 import { LoginRequired } from '@/components/auth/LoginRequired';
 import UpdatePasswordModal from '@/components/modals/UpdatePasswordModal';
 import { showSuccess } from '@/lib/sweetalert';
 
-/**
- * Profile menu item interface
- */
 interface ProfileMenuItem {
   label: string;
   href: string;
@@ -20,80 +18,146 @@ interface ProfileMenuItem {
   description: string;
 }
 
-/**
- * User icon component
- */
 const UserIcon = () => (
-  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+  <svg
+    className="w-5 h-5"
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+    strokeWidth={1.75}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
   </svg>
 );
 
-/**
- * Settings icon component
- */
 const SettingsIcon = () => (
-  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+  <svg
+    className="w-5 h-5"
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+    strokeWidth={1.75}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <circle cx="12" cy="12" r="3" />
+    <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" />
   </svg>
 );
 
-/**
- * Star icon component for recommendations
- */
 const StarIcon = () => (
-  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+  <svg
+    className="w-5 h-5"
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+    strokeWidth={1.75}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
   </svg>
 );
 
-/**
- * Lock icon component
- */
+const HeartIcon = () => (
+  <svg
+    className="w-5 h-5"
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+    strokeWidth={1.75}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+  </svg>
+);
+
+const CalendarIcon = () => (
+  <svg
+    className="w-5 h-5"
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+    strokeWidth={1.75}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+    <line x1="16" y1="2" x2="16" y2="6" />
+    <line x1="8" y1="2" x2="8" y2="6" />
+    <line x1="3" y1="10" x2="21" y2="10" />
+  </svg>
+);
+
 const LockIcon = () => (
-  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+  <svg
+    className="w-5 h-5"
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+    strokeWidth={1.75}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+    <path d="M7 11V7a5 5 0 0110 0v4" />
   </svg>
 );
 
-/**
- * Logout icon component
- */
 const LogoutIcon = () => (
-  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+  <svg
+    className="w-5 h-5"
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+    strokeWidth={1.75}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+    <polyline points="16 17 21 12 16 7" />
+    <line x1="21" y1="12" x2="9" y2="12" />
   </svg>
 );
 
-/**
- * Arrow right icon component
- */
 const ArrowRightIcon = () => (
-  <svg className="w-5 h-5 text-gray-400 group-hover:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+  <svg
+    className="w-4 h-4 text-[var(--ink-secondary)] group-hover:text-[var(--accent-primary)] transition-colors"
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+    strokeWidth={1.75}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M9 5l7 7-7 7" />
   </svg>
 );
 
-/**
- * Get role badge color based on user role
- */
 const getRoleBadgeColor = (role: string): string => {
   switch (role) {
     case 'ADMIN':
-      return 'bg-purple-100 text-purple-700 border-purple-200';
+      return 'bg-[var(--ink-primary)] text-white border-[var(--ink-primary)]';
     case 'SELLER':
-      return 'bg-green-100 text-green-700 border-green-200';
+      return 'bg-[var(--accent-spark-tint)] text-[#9A471F] border-[#F2CDBB]';
     case 'RENTER':
-      return 'bg-blue-100 text-blue-700 border-blue-200';
+      return 'bg-[var(--accent-tint)] text-[var(--accent-primary)] border-[#BBDCD0]';
     default:
-      return 'bg-gray-100 text-gray-700 border-gray-200';
+      return 'bg-[var(--bg-muted)] text-[var(--ink-secondary)] border-[var(--border-stone)]';
   }
 };
 
-/**
- * Get role display name
- */
 const getRoleDisplayName = (role: string): string => {
   switch (role) {
     case 'ADMIN':
@@ -107,78 +171,97 @@ const getRoleDisplayName = (role: string): string => {
   }
 };
 
-/**
- * ProfilePage Component
- * Enhanced profile page with better styling and navigation to preferences
- */
 export default function ProfilePage() {
   const { user, logout } = useAuth();
   const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [avatarFailed, setAvatarFailed] = useState(false);
 
   const handleLogout = () => {
     logout();
     router.push('/');
   };
 
-  // Menu items for profile page
   const menuItems: ProfileMenuItem[] = [
     {
       label: 'Preferensi Pencarian',
       href: '/profile/preferences',
       icon: <SettingsIcon />,
-      description: 'Atur preferensi untuk mendapatkan rekomendasi kos terbaik',
+      description: 'Atur kriteria budget, lokasi, fasilitas, dan bobot SPK',
     },
     {
       label: 'Rekomendasi Kos',
       href: '/recommendations',
       icon: <StarIcon />,
-      description: 'Lihat kos yang sesuai dengan preferensi Anda',
+      description: 'Lihat peringkat kos yang cocok dengan profil Anda',
+    },
+    {
+      label: 'Favorit Saya',
+      href: '/favorites',
+      icon: <HeartIcon />,
+      description: 'Tinjau daftar kos yang sudah Anda simpan',
+    },
+    {
+      label: 'Booking Saya',
+      href: '/renter/bookings',
+      icon: <CalendarIcon />,
+      description: 'Pantau status konfirmasi dan riwayat pengajuan sewa',
     },
   ];
 
-  // Filter menu items based on role (only RENTER can see preferences)
   const visibleMenuItems = user?.role === 'RENTER' ? menuItems : [];
+  const initials = (user?.username?.slice(0, 2) || 'KS').toUpperCase();
 
   return (
     <LoginRequired>
-      <Header />
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-teal-50 pt-24 pb-12">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="min-h-[100dvh] bg-[var(--bg-canvas)] pt-16 flex flex-col">
+        <Header />
+        <main className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 space-y-6">
           {/* Profile Header Card */}
-          <div className="bg-white rounded-2xl shadow-xl overflow-hidden mb-6">
-            {/* Cover Image / Gradient */}
-            <div className="h-32 bg-gradient-to-r from-blue-500 via-blue-600 to-teal-500" />
-            
-            {/* Profile Info */}
+          <div className="bg-[var(--bg-surface)] border border-[var(--border-stone)] rounded-[20px] overflow-hidden">
+            {/* Architectural Warm Tactile Tone-Step Cover */}
+            <div className="h-28 bg-[var(--bg-muted)] border-b border-[var(--border-stone)] relative overflow-hidden">
+              <div
+                aria-hidden="true"
+                className="absolute inset-y-0 right-0 w-2/5 bg-[var(--accent-tint)]/75 -skew-x-12 translate-x-10"
+              />
+            </div>
+
             <div className="relative px-6 pb-6">
-              {/* Avatar */}
-              <div className="absolute -top-16 left-6">
-                <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-white shadow-lg bg-white">
-                  <Image
-                    src="/images/profile.jpg"
-                    alt="Profile Picture"
-                    fill
-                    className="object-cover"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.src = `https://ui-avatars.com/api/?name=${user?.username || 'User'}&background=3b82f6&color=fff&size=128`;
-                    }}
-                  />
+              <div className="absolute -top-14 left-6">
+                <div className="relative w-28 h-28 rounded-full overflow-hidden border-4 border-[var(--bg-surface)] bg-[var(--accent-primary)] flex items-center justify-center shadow-sm">
+                  {avatarFailed ? (
+                    <span className="font-mono-tabular text-2xl font-bold text-white">
+                      {initials}
+                    </span>
+                  ) : (
+                    <Image
+                      src="/images/profile.jpg"
+                      alt={`Foto profil ${user?.username || 'pengguna'}`}
+                      fill
+                      className="object-cover"
+                      onError={() => setAvatarFailed(true)}
+                    />
+                  )}
                 </div>
               </div>
 
-              {/* User Info */}
-              <div className="pt-20 sm:pt-4 sm:pl-40">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="pt-16 sm:pt-4 sm:pl-34">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div>
-                    <h1 className="text-2xl font-bold text-gray-900">{user?.username}</h1>
-                    <div className="flex items-center gap-3 mt-2">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getRoleBadgeColor(user?.role || '')}`}>
+                    <h1 className="text-2xl font-bold text-[var(--ink-primary)] tracking-tight">
+                      {user?.username}
+                    </h1>
+                    <div className="flex flex-wrap items-center gap-2.5 mt-2">
+                      <span
+                        className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${getRoleBadgeColor(
+                          user?.role || ''
+                        )}`}
+                      >
                         {getRoleDisplayName(user?.role || '')}
                       </span>
-                      <span className="text-sm text-gray-500">
-                        ID: {user?.userId}
+                      <span className="font-mono-tabular text-xs font-medium text-[var(--ink-secondary)]">
+                        ID: #{user?.userId}
                       </span>
                     </div>
                   </div>
@@ -189,97 +272,111 @@ export default function ProfilePage() {
 
           {/* Menu Section for RENTER */}
           {visibleMenuItems.length > 0 && (
-            <div className="bg-white rounded-2xl shadow-xl overflow-hidden mb-6">
-              <div className="px-6 py-4 border-b border-gray-100">
-                <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                  <UserIcon />
-                  Pengaturan Akun
+            <section className="bg-[var(--bg-surface)] border border-[var(--border-stone)] rounded-[20px] overflow-hidden">
+              <div className="px-6 py-4 border-b border-[var(--border-stone)] bg-[var(--bg-canvas)]/50">
+                <h2 className="text-base font-semibold text-[var(--ink-primary)] flex items-center gap-2">
+                  <span className="text-[var(--accent-primary)]">
+                    <UserIcon />
+                  </span>
+                  <span>Navigasi Pencari Kos</span>
                 </h2>
               </div>
-              <div className="divide-y divide-gray-100">
+              <div className="divide-y divide-[var(--border-stone)]">
                 {visibleMenuItems.map((item) => (
                   <Link
                     key={item.href}
                     href={item.href}
-                    className="group flex items-center justify-between px-6 py-4 hover:bg-blue-50 transition-colors"
+                    className="group flex items-center justify-between px-6 py-4 hover:bg-[var(--bg-canvas)] transition-colors"
                   >
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-100 text-blue-600 group-hover:bg-blue-200 transition-colors">
+                    <div className="flex items-center gap-4 min-w-0">
+                      <div className="flex items-center justify-center w-10 h-10 rounded-[12px] bg-[var(--accent-tint)] text-[var(--accent-primary)] shrink-0">
                         {item.icon}
                       </div>
-                      <div>
-                        <h3 className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors">
+                      <div className="min-w-0">
+                        <h3 className="text-sm font-semibold text-[var(--ink-primary)] group-hover:text-[var(--accent-primary)] transition-colors">
                           {item.label}
                         </h3>
-                        <p className="text-sm text-gray-500">{item.description}</p>
+                        <p className="text-xs text-[var(--ink-secondary)] mt-0.5 truncate">
+                          {item.description}
+                        </p>
                       </div>
                     </div>
                     <ArrowRightIcon />
                   </Link>
                 ))}
               </div>
-            </div>
+            </section>
           )}
 
           {/* Actions Section */}
-          <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100">
-              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                <LockIcon />
-                Keamanan & Aksi
+          <section className="bg-[var(--bg-surface)] border border-[var(--border-stone)] rounded-[20px] overflow-hidden">
+            <div className="px-6 py-4 border-b border-[var(--border-stone)] bg-[var(--bg-canvas)]/50">
+              <h2 className="text-base font-semibold text-[var(--ink-primary)] flex items-center gap-2">
+                <span className="text-[var(--accent-primary)]">
+                  <LockIcon />
+                </span>
+                <span>Keamanan &amp; Aksi</span>
               </h2>
             </div>
-            <div className="divide-y divide-gray-100">
-              {/* Change Password */}
+            <div className="divide-y divide-[var(--border-stone)]">
               <button
+                type="button"
                 onClick={() => setIsModalOpen(true)}
-                className="group w-full flex items-center justify-between px-6 py-4 hover:bg-blue-50 transition-colors text-left"
+                className="group w-full flex items-center justify-between px-6 py-4 hover:bg-[var(--bg-canvas)] transition-colors text-left cursor-pointer"
               >
                 <div className="flex items-center gap-4">
-                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-100 text-blue-600 group-hover:bg-blue-200 transition-colors">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-[12px] bg-[var(--accent-tint)] text-[var(--accent-primary)] shrink-0">
                     <LockIcon />
                   </div>
                   <div>
-                    <h3 className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors">
+                    <h3 className="text-sm font-semibold text-[var(--ink-primary)] group-hover:text-[var(--accent-primary)] transition-colors">
                       Ubah Kata Sandi
                     </h3>
-                    <p className="text-sm text-gray-500">Perbarui kata sandi akun Anda</p>
+                    <p className="text-xs text-[var(--ink-secondary)] mt-0.5">
+                      Perbarui kata sandi akun Anda secara berkala
+                    </p>
                   </div>
                 </div>
                 <ArrowRightIcon />
               </button>
 
-              {/* Logout */}
               <button
+                type="button"
                 onClick={handleLogout}
-                className="group w-full flex items-center justify-between px-6 py-4 hover:bg-red-50 transition-colors text-left"
+                className="group w-full flex items-center justify-between px-6 py-4 hover:bg-[var(--accent-danger-tint)] transition-colors text-left cursor-pointer"
               >
                 <div className="flex items-center gap-4">
-                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-red-100 text-red-600 group-hover:bg-red-200 transition-colors">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-[12px] bg-[var(--accent-danger-tint)] text-[var(--accent-danger)] shrink-0">
                     <LogoutIcon />
                   </div>
                   <div>
-                    <h3 className="font-medium text-red-600 group-hover:text-red-700 transition-colors">
+                    <h3 className="text-sm font-semibold text-[var(--accent-danger)]">
                       Keluar
                     </h3>
-                    <p className="text-sm text-gray-500">Keluar dari akun Anda</p>
+                    <p className="text-xs text-[var(--ink-secondary)] mt-0.5">
+                      Akhiri sesi Anda pada perangkat ini
+                    </p>
                   </div>
                 </div>
-                <svg className="w-5 h-5 text-gray-400 group-hover:text-red-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                <svg
+                  className="w-4 h-4 text-[var(--accent-danger)]"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.75}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M9 5l7 7-7 7" />
                 </svg>
               </button>
             </div>
-          </div>
-
-          {/* Footer Info */}
-          <div className="mt-6 text-center text-sm text-gray-500">
-            <p>Bergabung sejak 2024</p>
-          </div>
-        </div>
+          </section>
+        </main>
+        <Footer />
       </div>
 
-      {/* Password Modal */}
       {isModalOpen && (
         <UpdatePasswordModal
           onClose={() => setIsModalOpen(false)}
