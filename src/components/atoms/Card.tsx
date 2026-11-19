@@ -27,9 +27,9 @@ export const Card: React.FC<CardProps> = ({
   return (
     <div
       className={clsx(
-        'rounded-lg bg-white shadow-sm',
-        bordered && 'border border-gray-200',
-        hover && 'transition-colors hover:bg-gray-50',
+        'rounded-[16px] bg-[var(--bg-surface)]',
+        bordered && 'border border-[var(--border-stone)]',
+        hover && 'card-tactile-lift',
         paddingMap[padding],
         className
       )}
@@ -45,20 +45,40 @@ export interface CardHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
   actions?: React.ReactNode;
 }
 
-export const CardHeader: React.FC<CardHeaderProps> = ({ title, actions, className, children, ...props }) => (
-  <div className={clsx('mb-4 flex items-start justify-between gap-4', className)} {...props}>
+export const CardHeader: React.FC<CardHeaderProps> = ({
+  title,
+  actions,
+  className,
+  children,
+  ...props
+}) => (
+  <div
+    className={clsx('mb-4 flex items-start justify-between gap-4', className)}
+    {...props}
+  >
     <div>
-      {title && <h3 className="text-lg font-semibold text-gray-900">{title}</h3>}
+      {title && (
+        <h3 className="text-lg font-semibold text-[var(--ink-primary)]">
+          {title}
+        </h3>
+      )}
       {children}
     </div>
     {actions && <div className="flex items-center gap-2">{actions}</div>}
   </div>
 );
 
-export const CardContent: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({ className, ...props }) => (
-  <div className={clsx('space-y-4', className)} {...props} />
-);
+export const CardContent: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({
+  className,
+  ...props
+}) => <div className={clsx('space-y-4', className)} {...props} />;
 
-export const CardFooter: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({ className, ...props }) => (
-  <div className={clsx('mt-4 pt-4 border-t border-gray-100', className)} {...props} />
+export const CardFooter: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({
+  className,
+  ...props
+}) => (
+  <div
+    className={clsx('mt-4 pt-4 border-t border-[var(--border-stone)]', className)}
+    {...props}
+  />
 );

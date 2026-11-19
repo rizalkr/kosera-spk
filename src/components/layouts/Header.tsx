@@ -1,12 +1,13 @@
-"use client";
-import { useEffect, useState, useRef } from "react";
-import { usePathname, useRouter } from "next/navigation";
-import Link from "next/link";
-import { useAuth } from "@/contexts/AuthContext";
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Header() {
   const [scrolled, setScrolled] = useState(false);
-  const [open, setOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [servicesOpen, setServicesOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
@@ -23,33 +24,49 @@ export default function Header() {
         setServicesOpen(false);
       }
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setServicesOpen(false);
+        setMobileMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, []);
 
   useEffect(() => {
     function handleScroll() {
       setScrolled(window.scrollY > 10);
     }
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  useEffect(() => {
+    setMobileMenuOpen(false);
+    setServicesOpen(false);
+  }, [pathname]);
 
   const handleLogout = async () => {
     try {
       await logout();
-      setOpen(false);
+      setMobileMenuOpen(false);
       router.push('/auth/login');
     } catch (error) {
       console.error('Logout failed:', error);
     }
   };
 
-  // Navigation items berdasarkan role
+  // Role-based navigation links preserved for all existing user roles
   const getNavigationItems = () => {
     if (!user) return [];
-    
-    const items = [];
+
+    const items: Array<{ label: string; href: string }> = [];
 
     switch (user.role) {
       case 'ADMIN':
@@ -77,286 +94,330 @@ export default function Header() {
     return items;
   };
 
-  // Helper untuk cek active link
   const isActive = (href: string) => {
-    if (href === "/") return pathname === "/";
-    return pathname.startsWith(href);
+    if (href === '/') return pathname === '/';
+    return pathname?.startsWith(href) ?? false;
   };
+
+  const isServicesActive =
+    pathname?.startsWith('/services/') ?? false;
+
+  const navLinkClass = (active: boolean) =>
+    `px-3 py-1.5 rounded-[10px] text-sm transition-colors whitespace-nowrap ${
+      active
+        ? 'bg-[var(--bg-muted)] text-[var(--ink-primary)] font-semibold'
+        : 'text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] hover:bg-[var(--bg-muted)]/60 font-medium'
+    }`;
 
   return (
     <header
-      className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${
-        scrolled ? "bg-[#E1F6F2] backdrop-blur shadow-sm" : "bg-[#E1F6F2]"
+      className={`fixed top-0 left-0 w-full z-50 bg-[var(--bg-canvas)]/95 backdrop-blur-sm border-b border-[var(--border-stone)] transition-shadow duration-200 ${
+        scrolled ? 'shadow-[0_4px_20px_-12px_rgba(24,26,24,0.12)]' : ''
       }`}
     >
-      <div className="max-w-7xl mx-auto flex items-center px-8 py-4 relative overflow-visible">
-        <div className="text-2xl font-bold text-blue-400">KOSERA.</div>
-        {/* Hamburger for mobile */}
+      <div className="max-w-7xl mx-auto h-16 px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4 relative">
+        {/* Left: Brand Wordmark */}
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-xl font-bold tracking-[-0.03em] text-[var(--ink-primary)] shrink-0"
+        >
+          <span
+            aria-hidden="true"
+            className="w-2.5 h-2.5 rounded-[3px] bg-[var(--accent-primary)] inline-block"
+          />
+          <span>KOSERA</span>
+        </Link>
+
+        {/* Center: Desktop Navigation */}
+        <nav
+          aria-label="Primary navigation"
+          className="hidden lg:flex items-center gap-1"
+        >
+          <Link href="/" className={navLinkClass(isActive('/'))}>
+            Home
+          </Link>
+          <Link href="/list" className={navLinkClass(isActive('/list'))}>
+            List Kos
+          </Link>
+
+          {/* Services Dropdown */}
+          <div className="relative" ref={servicesRef}>
+            <button
+              type="button"
+              onClick={() => setServicesOpen((prev) => !prev)}
+              aria-expanded={servicesOpen}
+              aria-haspopup="menu"
+              className={`${navLinkClass(isServicesActive)} inline-flex items-center gap-1 cursor-pointer`}
+            >
+              <span>Services</span>
+              <svg
+                className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                  servicesOpen ? 'rotate-180' : ''
+                }`}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.75}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </button>
+
+            <div
+              role="menu"
+              style={{ boxShadow: 'var(--shadow-float)' }}
+              className={`spring-transition absolute left-0 mt-2 w-48 bg-[var(--bg-surface)] border border-[var(--border-stone)] rounded-[16px] p-1.5 z-50 origin-top ${
+                servicesOpen
+                  ? 'opacity-100 scale-100 translate-y-0 pointer-events-auto'
+                  : 'opacity-0 scale-95 -translate-y-1 pointer-events-none'
+              }`}
+            >
+              <Link
+                href="/services/angkutBarang"
+                role="menuitem"
+                onClick={() => setServicesOpen(false)}
+                className={`block px-3 py-2 rounded-[10px] text-sm transition-colors ${
+                  isActive('/services/angkutBarang')
+                    ? 'bg-[var(--accent-tint)] text-[var(--accent-primary)] font-semibold'
+                    : 'text-[var(--ink-primary)] hover:bg-[var(--bg-canvas)]'
+                }`}
+              >
+                Angkut Barang
+              </Link>
+              <Link
+                href="/services/titipBarang"
+                role="menuitem"
+                onClick={() => setServicesOpen(false)}
+                className={`block px-3 py-2 rounded-[10px] text-sm transition-colors ${
+                  isActive('/services/titipBarang')
+                    ? 'bg-[var(--accent-tint)] text-[var(--accent-primary)] font-semibold'
+                    : 'text-[var(--ink-primary)] hover:bg-[var(--bg-canvas)]'
+                }`}
+              >
+                Titip Barang
+              </Link>
+            </div>
+          </div>
+
+          {isAuthenticated &&
+            getNavigationItems().map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={navLinkClass(isActive(item.href))}
+              >
+                {item.label}
+              </Link>
+            ))}
+        </nav>
+
+        {/* Right: Desktop Auth Actions */}
+        <div className="hidden lg:flex items-center gap-2 shrink-0">
+          {isLoading ? (
+            <div
+              className="h-9 w-24 rounded-[10px] bg-[var(--bg-muted)] animate-pulse"
+              aria-label="Memuat status akun"
+            />
+          ) : isAuthenticated ? (
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="px-4 py-2 rounded-[10px] text-xs font-semibold border border-[var(--border-stone)] bg-[var(--bg-surface)] text-[var(--ink-primary)] hover:border-[var(--accent-danger)] hover:text-[var(--accent-danger)] hover:bg-[var(--accent-danger-tint)] transition-colors cursor-pointer"
+            >
+              Keluar
+            </button>
+          ) : (
+            <>
+              <Link
+                href="/auth/login"
+                className="px-4 py-2 rounded-[10px] text-xs font-semibold border border-[var(--border-stone)] bg-[var(--bg-surface)] text-[var(--ink-primary)] hover:border-[var(--ink-secondary)] transition-colors"
+              >
+                Masuk
+              </Link>
+              <Link
+                href="/auth/register"
+                className="px-4 py-2 rounded-[10px] text-xs font-semibold bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-primary-hover)] transition-colors"
+              >
+                Daftar
+              </Link>
+            </>
+          )}
+        </div>
+
+        {/* Mobile Hamburger */}
         <button
-          className="ml-auto lg:hidden p-2"
-          onClick={() => setOpen(!open)}
+          type="button"
+          className="lg:hidden w-10 h-10 rounded-[10px] border border-[var(--border-stone)] bg-[var(--bg-surface)] flex items-center justify-center text-[var(--ink-primary)] cursor-pointer"
+          onClick={() => setMobileMenuOpen((prev) => !prev)}
+          aria-expanded={mobileMenuOpen}
           aria-label="Toggle navigation"
         >
-          <span
-            className={`block w-6 h-0.5 bg-blue-900 mb-1 transition-all duration-300 ${
-              open ? "rotate-45 translate-y-2" : ""
-            }`}
-          ></span>
-          <span
-            className={`block w-6 h-0.5 bg-blue-900 mb-1 transition-all duration-300 ${
-              open ? "opacity-0" : ""
-            }`}
-          ></span>
-          <span
-            className={`block w-6 h-0.5 bg-blue-900 transition-all duration-300 ${
-              open ? "-rotate-45 -translate-y-2" : ""
-            }`}
-          ></span>
+          {mobileMenuOpen ? (
+            <svg
+              className="w-5 h-5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.75}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
+          ) : (
+            <svg
+              className="w-5 h-5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.75}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <line x1="4" y1="7" x2="20" y2="7" />
+              <line x1="4" y1="12" x2="20" y2="12" />
+              <line x1="4" y1="17" x2="20" y2="17" />
+            </svg>
+          )}
         </button>
-        {/* Navigation */}
-        <nav
-          className={`space-x-6 transition-all duration-300 ${
-            scrolled
-              ? "absolute left-1/2 -translate-x-1/2"
-              : "ml-auto"
-          } hidden lg:flex overflow-visible`}
+      </div>
+
+      {/* Mobile Drawer */}
+      {mobileMenuOpen && (
+        <div
+          style={{ boxShadow: 'var(--shadow-float)' }}
+          className="lg:hidden bg-[var(--bg-surface)] border-t border-[var(--border-stone)] px-4 py-4 space-y-2"
         >
-          <button
-            onClick={() => router.push("/")}
-            className={`text-[#83B8C6] hover:underline transition-all duration-150 ${
-              isActive("/") ? "underline font-semibold" : ""
+          <Link
+            href="/"
+            onClick={() => setMobileMenuOpen(false)}
+            className={`block px-3 py-2.5 rounded-[10px] text-sm ${
+              isActive('/')
+                ? 'bg-[var(--bg-muted)] text-[var(--ink-primary)] font-semibold'
+                : 'text-[var(--ink-secondary)] hover:bg-[var(--bg-canvas)] hover:text-[var(--ink-primary)]'
             }`}
           >
             Home
-          </button>
-          <button
-            onClick={() => router.push("/list")}
-            className={`text-[#83B8C6] hover:underline transition-all duration-150 ${
-              isActive("/list") ? "underline font-semibold" : ""
+          </Link>
+          <Link
+            href="/list"
+            onClick={() => setMobileMenuOpen(false)}
+            className={`block px-3 py-2.5 rounded-[10px] text-sm ${
+              isActive('/list')
+                ? 'bg-[var(--bg-muted)] text-[var(--ink-primary)] font-semibold'
+                : 'text-[var(--ink-secondary)] hover:bg-[var(--bg-canvas)] hover:text-[var(--ink-primary)]'
             }`}
           >
             List Kos
-          </button>
-          <div className="mt-2 relative inline-block" ref={servicesRef}>
+          </Link>
+
+          {/* Mobile Services */}
+          <div className="rounded-[12px] bg-[var(--bg-canvas)] border border-[var(--border-stone)] overflow-hidden">
             <button
-              className="hover:underline text-[#83B8C6] flex items-center gap-1"
-              onClick={() => setServicesOpen((v) => !v)}
               type="button"
+              onClick={() => setServicesOpen((prev) => !prev)}
+              aria-expanded={servicesOpen}
+              className="w-full px-3 py-2.5 flex items-center justify-between text-sm font-medium text-[var(--ink-primary)] cursor-pointer"
             >
-              Services
+              <span>Services</span>
               <svg
-                className={`w-4 h-4 transition-transform ${
-                  servicesOpen ? "rotate-180" : ""
+                className={`w-4 h-4 transition-transform duration-200 ${
+                  servicesOpen ? 'rotate-180' : ''
                 }`}
+                viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
+                strokeWidth={1.75}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
               >
-                <path d="M19 9l-7 7-7-7" />
+                <path d="m6 9 6 6 6-6" />
               </svg>
             </button>
-            {/* Submenu with animation */}
-            <div
-              className={`
-                absolute left-0 mt-2 w-40 bg-white shadow-lg z-50 flex flex-col text-[#83B8C6]
-                transition-all duration-300 origin-top rounded-2xl
-                ${servicesOpen
-                  ? "opacity-100 scale-y-100 pointer-events-auto"
-                  : "opacity-0 scale-y-95 pointer-events-none"
-                }
-              `}
-              style={{ transformOrigin: "top" }}
-            >
-              <button
-                onClick={() => {
-                  router.push("/services/angkutBarang");
-                  setServicesOpen(false);
-                }}
-                className="px-4 py-2 text-left hover:bg-blue-50 hover:underline transition rounded-t-2xl"
-              >
-                Angkut Barang
-              </button>
-              <button
-                onClick={() => {
-                  router.push("/services/titipBarang");
-                  setServicesOpen(false);
-                }}
-                className="px-4 py-2 text-left hover:bg-blue-50 hover:underline transition rounded-b-2xl"
-              >
-                Titip Barang
-              </button>
-            </div>
+            {servicesOpen && (
+              <div className="px-2 pb-2 space-y-1 border-t border-[var(--border-stone)] pt-1.5">
+                <Link
+                  href="/services/angkutBarang"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    setServicesOpen(false);
+                  }}
+                  className="block px-3 py-2 rounded-[8px] text-sm text-[var(--ink-secondary)] hover:bg-[var(--bg-surface)] hover:text-[var(--ink-primary)]"
+                >
+                  Angkut Barang
+                </Link>
+                <Link
+                  href="/services/titipBarang"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    setServicesOpen(false);
+                  }}
+                  className="block px-3 py-2 rounded-[8px] text-sm text-[var(--ink-secondary)] hover:bg-[var(--bg-surface)] hover:text-[var(--ink-primary)]"
+                >
+                  Titip Barang
+                </Link>
+              </div>
+            )}
           </div>
-          {/* Dynamic navigation based on user role */}
-          {isAuthenticated && getNavigationItems().map((item) => (
-            <button
-              key={item.href}
-              onClick={() => router.push(item.href)}
-              className={`text-[#83B8C6] hover:underline transition-all duration-150 ${
-                isActive(item.href) ? "underline font-semibold" : ""
-              }`}
-            >
-              {item.label}
-            </button>
-          ))}
-          
-          {/* Authentication Section for Desktop */}
-          {isLoading ? (
-            <div className="ml-4 bg-gray-200 animate-pulse rounded px-4 py-2 w-20" aria-label="Memuat status akun" />
-          ) : isAuthenticated ? (
-            <button
-              onClick={handleLogout}
-              className="ml-4 text-red-600 hover:text-red-700 px-4 py-2 border border-red-600 rounded hover:bg-red-50 transition-colors"
-            >
-              Keluar
-            </button>
-          ) : (
-            <div className="flex space-x-2 ml-4">
+
+          {isAuthenticated &&
+            getNavigationItems().map((item) => (
               <Link
-                href="/auth/login"
-                className="text-blue-600 hover:text-blue-700 px-4 py-2 border border-blue-600 rounded hover:bg-blue-50 transition-colors"
-              >
-                Masuk
-              </Link>
-              <Link
-                href="/auth/register"
-                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
-              >
-                Daftar
-              </Link>
-            </div>
-          )}
-        </nav>
-        {/* Mobile nav */}
-        <div
-          className={`absolute top-full left-0 w-full bg-white shadow-lg flex flex-col items-center py-4 gap-4 lg:hidden z-50 transition-all duration-300 ${
-            open
-              ? "opacity-100 pointer-events-auto translate-y-0"
-              : "opacity-0 pointer-events-none -translate-y-2"
-          }`}
-        >
-          <button
-            onClick={() => {
-              router.push("/");
-              setOpen(false);
-            }}
-            className={`text-blue-400 hover:underline transition-all duration-150 ${
-              isActive("/") ? "underline font-semibold" : ""
-            }`}
-          >
-            Home
-          </button>
-          <button
-            onClick={() => {
-              router.push("/list");
-              setOpen(false);
-            }}
-            className={`text-blue-400 hover:underline transition-all duration-150 ${
-              isActive("/list") ? "underline font-semibold" : ""
-            }`}
-          >
-            Daftar
-          </button>
-          {/* Mobile Services with submenu */}
-          <div className="w-full flex flex-col items-center">
-            <button
-              className="hover:underline text-blue-400 flex items-center gap-1"
-              onClick={() => setServicesOpen((v) => !v)}
-              type="button"
-            >
-              Services
-              <svg
-                className={`w-4 h-4 transition-transform ${
-                  servicesOpen ? "rotate-180" : ""
+                key={item.href}
+                href={item.href}
+                onClick={() => setMobileMenuOpen(false)}
+                className={`block px-3 py-2.5 rounded-[10px] text-sm ${
+                  isActive(item.href)
+                    ? 'bg-[var(--bg-muted)] text-[var(--ink-primary)] font-semibold'
+                    : 'text-[var(--ink-secondary)] hover:bg-[var(--bg-canvas)] hover:text-[var(--ink-primary)]'
                 }`}
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
               >
-                <path d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            <div
-              className={`
-                flex flex-col w-full items-center overflow-hidden
-                transition-all duration-300 ease-in-out
-                ${servicesOpen
-                  ? "max-h-24 opacity-100"
-                  : "max-h-0 opacity-0"
-                }
-              `}
-            >
+                {item.label}
+              </Link>
+            ))}
+
+          <div className="pt-3 border-t border-[var(--border-stone)]">
+            {isLoading ? (
+              <div
+                className="h-10 w-full rounded-[10px] bg-[var(--bg-muted)] animate-pulse"
+                aria-label="Memuat status akun"
+              />
+            ) : isAuthenticated ? (
               <button
-                onClick={() => {
-                  router.push("/services/angkutBarang");
-                  setOpen(false);
-                  setServicesOpen(false);
-                }}
-                className="px-4 py-2 text-blue-400 hover:underline transition w-full text-center"
+                type="button"
+                onClick={handleLogout}
+                className="w-full py-2.5 px-4 rounded-[10px] text-sm font-semibold border border-[var(--accent-danger)]/40 bg-[var(--accent-danger-tint)] text-[var(--accent-danger)] cursor-pointer"
               >
-                Angkut Barang
+                Keluar
               </button>
-              <button
-                onClick={() => {
-                  router.push("/services/titipBarang");
-                  setOpen(false);
-                  setServicesOpen(false);
-                }}
-                className="px-4 py-2 text-blue-400 hover:underline transition w-full text-center"
-              >
-                Titip Barang
-              </button>
-            </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2.5">
+                <Link
+                  href="/auth/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="py-2.5 px-4 text-center rounded-[10px] text-sm font-semibold border border-[var(--border-stone)] bg-[var(--bg-canvas)] text-[var(--ink-primary)]"
+                >
+                  Masuk
+                </Link>
+                <Link
+                  href="/auth/register"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="py-2.5 px-4 text-center rounded-[10px] text-sm font-semibold bg-[var(--accent-primary)] text-white"
+                >
+                  Daftar
+                </Link>
+              </div>
+            )}
           </div>
-        
-          {/* Dynamic navigation based on user role */}
-          {isAuthenticated && getNavigationItems().map((item) => (
-            <button
-              key={item.href}
-              onClick={() => {
-                router.push(item.href);
-                setOpen(false);
-              }}
-              className={`text-blue-400 hover:underline transition-all duration-150 ${
-                isActive(item.href) ? "underline font-semibold" : ""
-              }`}
-            >
-              {item.label}
-            </button>
-          ))}
-          
-          {/* Authentication Section */}
-          {isLoading ? (
-            <div className="bg-gray-200 animate-pulse rounded px-4 py-2 w-20" aria-label="Memuat status akun" />
-          ) : isAuthenticated ? (
-            <button
-              onClick={handleLogout}
-              className="text-red-600 hover:text-red-700 px-4 py-2 border border-red-600 rounded hover:bg-red-50 transition-colors"
-            >
-              Keluar
-            </button>
-          ) : (
-            <div className="flex space-x-2">
-              <Link
-                href="/auth/login"
-                className="text-blue-600 hover:text-blue-700 px-4 py-2 border border-blue-600 rounded hover:bg-blue-50 transition-colors"
-                onClick={() => setOpen(false)}
-              >
-                Masuk
-              </Link>
-              <Link
-                href="/auth/register"
-                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
-                onClick={() => setOpen(false)}
-              >
-                Daftar
-              </Link>
-            </div>
-          )}
         </div>
-      </div>
+      )}
     </header>
   );
 }
