@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Image from 'next/image';
 
 interface ImageModalProps {
@@ -12,42 +12,44 @@ interface ImageModalProps {
   kosName: string;
 }
 
-export default function ImageModal({ 
-  isOpen, 
-  onClose, 
-  images, 
-  currentIndex, 
-  onImageChange, 
-  kosName 
+export default function ImageModal({
+  isOpen,
+  onClose,
+  images,
+  currentIndex,
+  onImageChange,
+  kosName,
 }: ImageModalProps) {
   const [imageIndex, setImageIndex] = useState(currentIndex);
   const [isZoomed, setIsZoomed] = useState(false);
 
+  const safeImages =
+    images.length > 0 ? images : ['/images/rooms/room1.jpg'];
+
   const handlePrevious = useCallback(() => {
-    const newIndex = imageIndex > 0 ? imageIndex - 1 : images.length - 1;
+    const newIndex = imageIndex > 0 ? imageIndex - 1 : safeImages.length - 1;
     setImageIndex(newIndex);
     onImageChange(newIndex);
-  }, [imageIndex, images.length, onImageChange]);
+  }, [imageIndex, safeImages.length, onImageChange]);
 
   const handleNext = useCallback(() => {
-    const newIndex = imageIndex < images.length - 1 ? imageIndex + 1 : 0;
+    const newIndex = imageIndex < safeImages.length - 1 ? imageIndex + 1 : 0;
     setImageIndex(newIndex);
     onImageChange(newIndex);
-  }, [imageIndex, images.length, onImageChange]);
+  }, [imageIndex, safeImages.length, onImageChange]);
 
   useEffect(() => {
     setImageIndex(currentIndex);
   }, [currentIndex]);
 
   useEffect(() => {
-    // Reset zoom when changing images
     setIsZoomed(false);
   }, [imageIndex]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isOpen) return;
-      
+
       if (e.key === 'Escape') {
         onClose();
       } else if (e.key === 'ArrowLeft') {
@@ -55,11 +57,10 @@ export default function ImageModal({
       } else if (e.key === 'ArrowRight') {
         handleNext();
       } else if (e.key === 'z' || e.key === 'Z') {
-        setIsZoomed(!isZoomed);
+        setIsZoomed((prev) => !prev);
       }
     };
 
-    // Disable body scroll when modal is open
     if (isOpen) {
       document.body.style.overflow = 'hidden';
     } else {
@@ -71,66 +72,92 @@ export default function ImageModal({
       window.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = 'unset';
     };
-  }, [isOpen, imageIndex, isZoomed, handleNext, handlePrevious, onClose]);
-
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
-  };
-
-  const handleImageClick = () => {
-    setIsZoomed(!isZoomed);
-  };
+  }, [isOpen, handleNext, handlePrevious, onClose]);
 
   if (!isOpen) return null;
 
   return (
-    <div 
-      className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4"
-      onClick={handleBackdropClick}
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Galeri foto ${kosName}`}
+      className="fixed inset-0 bg-[#181A18]/92 backdrop-blur-[2px] z-50 flex items-center justify-center p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
     >
-      {/* Close Button */}
-      <button
-        onClick={onClose}
-        className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors z-10 bg-black bg-opacity-50 rounded-full p-2"
-        aria-label="Tutup modal"
-      >
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
+      {/* Top Controls */}
+      <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setIsZoomed((prev) => !prev)}
+          className="w-10 h-10 rounded-[10px] bg-white/10 border border-white/20 text-white hover:bg-white/20 transition-colors flex items-center justify-center cursor-pointer"
+          aria-label={isZoomed ? 'Perkecil foto' : 'Perbesar foto'}
+          title={isZoomed ? 'Zoom out (Z)' : 'Zoom in (Z)'}
+        >
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.75}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.3-4.3" />
+            {isZoomed ? (
+              <line x1="8" y1="11" x2="14" y2="11" />
+            ) : (
+              <>
+                <line x1="11" y1="8" x2="11" y2="14" />
+                <line x1="8" y1="11" x2="14" y2="11" />
+              </>
+            )}
+          </svg>
+        </button>
 
-      {/* Zoom Button */}
-      <button
-        onClick={() => setIsZoomed(!isZoomed)}
-        className="absolute top-4 right-16 text-white hover:text-gray-300 transition-colors z-10 bg-black bg-opacity-50 rounded-full p-2"
-        aria-label={isZoomed ? "Zoom out" : "Zoom in"}
-        title={isZoomed ? "Zoom out (Z)" : "Zoom in (Z)"}
-      >
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          {isZoomed ? (
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10h-6" />
-          ) : (
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-          )}
-        </svg>
-      </button>
+        <button
+          type="button"
+          onClick={onClose}
+          className="w-10 h-10 rounded-[10px] bg-white/10 border border-white/20 text-white hover:bg-white/20 transition-colors flex items-center justify-center cursor-pointer"
+          aria-label="Tutup galeri"
+        >
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.75}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path d="M18 6 6 18" />
+            <path d="m6 6 12 12" />
+          </svg>
+        </button>
+      </div>
 
-      {/* Image Container */}
-      <div className={`relative max-w-4xl max-h-full w-full h-full flex items-center justify-center transition-all duration-300 ${
-        isZoomed ? 'max-w-none max-h-none scale-150 cursor-grab active:cursor-grabbing' : ''
-      }`}>
-        <div className="relative w-full h-full max-h-[80vh] flex items-center justify-center">
+      {/* Main Image Frame */}
+      <div
+        className={`relative max-w-4xl max-h-full w-full h-full flex items-center justify-center transition-transform duration-300 ${
+          isZoomed ? 'scale-125' : ''
+        }`}
+      >
+        <div className="relative w-full h-full max-h-[76vh] flex items-center justify-center">
           <Image
-            src={images[imageIndex]}
+            src={safeImages[imageIndex] || '/images/rooms/room1.jpg'}
             alt={`${kosName} - Foto ${imageIndex + 1}`}
-            width={800}
-            height={600}
-            className={`max-w-full max-h-full object-contain rounded-lg cursor-pointer transition-transform duration-300 ${
+            width={1000}
+            height={750}
+            className={`max-w-full max-h-full object-contain rounded-[14px] ${
               isZoomed ? 'cursor-zoom-out' : 'cursor-zoom-in'
             }`}
-            onClick={handleImageClick}
+            onClick={() => setIsZoomed((prev) => !prev)}
             onError={(e) => {
               const target = e.target as HTMLImageElement;
               target.src = '/images/rooms/room1.jpg';
@@ -138,77 +165,95 @@ export default function ImageModal({
           />
         </div>
 
-        {/* Navigation Arrows */}
-        {images.length > 1 && (
+        {safeImages.length > 1 && (
           <>
-            {/* Previous Button */}
             <button
+              type="button"
               onClick={handlePrevious}
-              className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-3 rounded-full hover:bg-opacity-70 transition-all"
+              className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/15 border border-white/25 text-white hover:bg-white/25 transition-colors flex items-center justify-center cursor-pointer"
               aria-label="Foto sebelumnya"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.75}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path d="m15 18-6-6 6-6" />
               </svg>
             </button>
 
-            {/* Next Button */}
             <button
+              type="button"
               onClick={handleNext}
-              className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-3 rounded-full hover:bg-opacity-70 transition-all"
+              className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/15 border border-white/25 text-white hover:bg-white/25 transition-colors flex items-center justify-center cursor-pointer"
               aria-label="Foto selanjutnya"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.75}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path d="m9 18 6-6-6-6" />
               </svg>
             </button>
           </>
         )}
       </div>
 
-      {/* Image Counter & Instructions */}
-      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-50 text-white px-4 py-2 rounded-full">
-        <div className="text-center">
-          <div className="text-sm font-medium">
-            {imageIndex + 1} / {images.length}
+      {/* Bottom Thumbnail Strip & Counter */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3 w-full max-w-xl px-4">
+        {safeImages.length > 1 && (
+          <div className="flex gap-2 overflow-x-auto max-w-full py-1 px-2">
+            {safeImages.map((image, index) => (
+              <button
+                key={index}
+                type="button"
+                onClick={() => {
+                  setImageIndex(index);
+                  onImageChange(index);
+                }}
+                aria-label={`Pilih foto ${index + 1}`}
+                className={`relative w-14 h-14 rounded-[10px] overflow-hidden shrink-0 border-2 transition-opacity cursor-pointer ${
+                  index === imageIndex
+                    ? 'border-[var(--accent-primary)] opacity-100'
+                    : 'border-transparent opacity-60 hover:opacity-90'
+                }`}
+              >
+                <Image
+                  src={image}
+                  alt={`Thumbnail ${index + 1}`}
+                  width={56}
+                  height={56}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = `/images/rooms/room${(index % 4) + 1}.jpg`;
+                  }}
+                />
+              </button>
+            ))}
           </div>
-          <div className="text-xs text-gray-300 mt-1">
-            Klik foto untuk zoom • Z untuk zoom • ← → untuk navigasi • ESC untuk tutup
-          </div>
+        )}
+
+        <div className="bg-black/60 border border-white/15 text-white px-4 py-1.5 rounded-full text-center">
+          <span className="font-mono-tabular text-xs font-semibold">
+            {imageIndex + 1} / {safeImages.length}
+          </span>
+          <span className="hidden sm:inline text-xs text-white/75 ml-3">
+            Klik foto atau Z untuk zoom · Panah Kiri/Kanan · ESC untuk tutup
+          </span>
         </div>
       </div>
-
-      {/* Thumbnail Strip */}
-      {images.length > 1 && (
-        <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 flex gap-2 max-w-md overflow-x-auto px-4">
-          {images.map((image, index) => (
-            <button
-              key={index}
-              onClick={() => {
-                setImageIndex(index);
-                onImageChange(index);
-              }}
-              className={`relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 transition-all ${
-                index === imageIndex 
-                  ? 'ring-2 ring-white ring-opacity-80' 
-                  : 'opacity-60 hover:opacity-80'
-              }`}
-            >
-              <Image
-                src={image}
-                alt={`Thumbnail ${index + 1}`}
-                width={64}
-                height={64}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.src = `/images/rooms/room${(index % 4) + 1}.jpg`;
-                }}
-              />
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

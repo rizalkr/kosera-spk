@@ -7,6 +7,7 @@ export interface HeaderSectionProps {
   name: string;
   address: string;
   city: string;
+  price?: number;
   averageRating?: string | number;
   totalReviews?: number;
   viewCount: number;
@@ -20,47 +21,57 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({
   name,
   address,
   city,
+  price = 0,
   averageRating,
-  totalReviews,
+  totalReviews = 0,
   viewCount,
   isFavorited,
   onToggleFavorite,
   onOpenBooking,
-  isAuthenticated
-}) => (
-  <div className="p-8 pb-4">
-    <div className="flex items-start justify-between mb-4">
-      <div className="flex-1">
-        <h1 className="text-3xl font-bold text-gray-800 mb-2">{name}</h1>
-        <p className="text-gray-600 text-lg mb-2">{address}, {city}</p>
-        <div className="flex items-center gap-4 mb-4">
-          {averageRating && Number(averageRating) > 0 && (
-            <div className="flex items-center gap-1">
-              <RatingStars rating={Math.round(Number(averageRating))} />
-              <span className="text-gray-600 ml-2">
-                {Number(averageRating).toFixed(1)} ({totalReviews} ulasan)
+  isAuthenticated,
+}) => {
+  const avgNum =
+    averageRating !== undefined ? Number(averageRating) : undefined;
+
+  return (
+    <div className="pb-6 border-b border-[var(--border-stone)] flex flex-col md:flex-row md:items-start justify-between gap-4">
+      <div className="space-y-2">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-[-0.02em] text-[var(--ink-primary)]">
+          {name}
+        </h1>
+        <p className="text-sm sm:text-base text-[var(--ink-secondary)]">
+          {address}, {city}
+        </p>
+        <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-[var(--ink-secondary)]">
+          {avgNum !== undefined && Number.isFinite(avgNum) && avgNum > 0 && (
+            <div className="inline-flex items-center gap-1.5">
+              <RatingStars rating={Math.round(avgNum)} size="sm" />
+              <span className="font-mono-tabular font-semibold text-[var(--ink-primary)]">
+                {avgNum.toFixed(1)}
               </span>
+              <span>({totalReviews} ulasan)</span>
             </div>
           )}
-          <div className="text-sm text-gray-500">
-            {viewCount} dilihat
-          </div>
+          <span className="font-mono-tabular">{viewCount} dilihat</span>
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        <FavoriteButton isFavorited={isFavorited} onClick={onToggleFavorite} />
-        <div className="text-right">
-          <PriceTag price={0} />
-          {/* Price will be replaced at usage site if needed */}
+      <div className="flex items-center gap-3 shrink-0">
+        <FavoriteButton
+          isFavorited={isFavorited}
+          onClick={onToggleFavorite}
+        />
+        <div className="text-right space-y-2">
+          {price > 0 && <PriceTag price={price} />}
           <button
+            type="button"
             onClick={onOpenBooking}
-            className="mt-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+            className="bg-[var(--accent-primary)] text-white px-5 py-2.5 rounded-[10px] hover:bg-[var(--accent-primary-hover)] transition-colors text-xs sm:text-sm font-semibold cursor-pointer"
           >
             {isAuthenticated ? 'Booking Sekarang' : 'Login untuk Booking'}
           </button>
         </div>
       </div>
     </div>
-  </div>
-);
+  );
+};

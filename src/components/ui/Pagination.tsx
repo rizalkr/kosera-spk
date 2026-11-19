@@ -7,31 +7,69 @@ interface PaginationProps {
   onPageChange: (page: number) => void;
 }
 
-export function Pagination({ currentPage, totalPages, onPageChange }: PaginationProps) {
-  // Jangan tampilkan apa-apa jika hanya ada satu halaman atau kurang
+export function Pagination({
+  currentPage,
+  totalPages,
+  onPageChange,
+}: PaginationProps) {
   if (totalPages <= 1) {
     return null;
   }
 
   return (
-    <div className="flex items-center justify-between px-6 py-4 mt-6 bg-white border-t border-gray-200 rounded-b-lg shadow">
-      <div className="text-sm text-gray-700">
-        Halaman <span className="font-medium">{currentPage}</span> dari <span className="font-medium">{totalPages}</span>
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-5 py-3.5 mt-6 bg-[var(--bg-surface)] border border-[var(--border-stone)] rounded-[16px]">
+      <div className="text-xs sm:text-sm text-[var(--ink-secondary)]">
+        Halaman{' '}
+        <span className="font-mono-tabular font-semibold text-[var(--ink-primary)]">
+          {currentPage}
+        </span>{' '}
+        dari{' '}
+        <span className="font-mono-tabular font-semibold text-[var(--ink-primary)]">
+          {totalPages}
+        </span>
       </div>
-      <div className="flex space-x-2">
+
+      <div className="flex items-center gap-2">
         <button
+          type="button"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-[var(--ink-primary)] bg-[var(--bg-canvas)] border border-[var(--border-stone)] rounded-[10px] hover:border-[var(--ink-secondary)] disabled:opacity-45 disabled:cursor-not-allowed transition-colors cursor-pointer"
         >
-          ← Sebelumnya
+          <svg
+            className="w-3.5 h-3.5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.75}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="m15 18-6-6 6-6" />
+          </svg>
+          <span>Sebelumnya</span>
         </button>
+
         <button
+          type="button"
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-[var(--ink-primary)] bg-[var(--bg-canvas)] border border-[var(--border-stone)] rounded-[10px] hover:border-[var(--ink-secondary)] disabled:opacity-45 disabled:cursor-not-allowed transition-colors cursor-pointer"
         >
-          Selanjutnya →
+          <span>Selanjutnya</span>
+          <svg
+            className="w-3.5 h-3.5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.75}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="m9 18 6-6-6-6" />
+          </svg>
         </button>
       </div>
     </div>

@@ -4,16 +4,42 @@ export interface FacilitiesListProps {
   facilities: string | undefined;
 }
 
-export const FacilitiesList: React.FC<FacilitiesListProps> = ({ facilities }) => {
+export const FacilitiesList: React.FC<FacilitiesListProps> = ({
+  facilities,
+}) => {
   if (!facilities) return null;
+
+  const items = facilities
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  if (items.length === 0) return null;
+
   return (
-    <section>
-      <h2 className="text-xl font-semibold text-gray-800 mb-3">Fasilitas</h2>
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-        {facilities.split(',').map((facility: string, index: number) => (
-          <div key={index} className="flex items-center gap-2 text-gray-600">
-            <span className="text-green-500">✓</span>
-            <span>{facility.trim()}</span>
+    <section className="space-y-3">
+      <h2 className="text-lg font-bold text-[var(--ink-primary)]">
+        Fasilitas Kamar &amp; Bangunan
+      </h2>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+        {items.map((facility, index) => (
+          <div
+            key={`${facility}-${index}`}
+            className="flex items-center gap-2 px-3.5 py-2.5 rounded-[10px] bg-[var(--bg-canvas)] border border-[var(--border-stone)] text-xs sm:text-sm font-medium text-[var(--ink-primary)]"
+          >
+            <svg
+              className="w-4 h-4 text-[var(--accent-primary)] shrink-0"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.75}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            <span className="truncate">{facility}</span>
           </div>
         ))}
       </div>

@@ -1,13 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { PublicKosData } from '@/types/kos';
+import { useEffect, useState } from 'react';
 import { useCreateBooking } from '@/hooks/useApi';
 import { showCustomAlert, showError } from '@/lib/sweetalert';
+import { formatRupiah } from '@/lib/utils/discovery';
+import type { PublicKosData } from '@/types/kos';
 
 interface BookingModalProps {
   kos: PublicKosData;
   isOpen: boolean;
+  initialDuration?: number;
   onClose: () => void;
   onBookingCreated?: () => void;
 }
@@ -19,33 +21,61 @@ interface BookingDetails {
   contactMethod: 'whatsapp' | 'phone';
 }
 
-export default function BookingModal({ kos, isOpen, onClose, onBookingCreated }: BookingModalProps) {
+export default function BookingModal({
+  kos,
+  isOpen,
+  initialDuration = 1,
+  onClose,
+  onBookingCreated,
+}: BookingModalProps) {
   const [bookingDetails, setBookingDetails] = useState<BookingDetails>({
     startDate: '',
-    duration: 1,
+    duration: initialDuration,
     notes: '',
-    contactMethod: 'whatsapp'
+    contactMethod: 'whatsapp',
   });
-  
+
   const [shouldRedirectOnReturn, setShouldRedirectOnReturn] = useState(false);
   const createBookingMutation = useCreateBooking();
 
-  // Handle page visibility change for auto-redirect when user returns from WhatsApp
+  useEffect(() => {
+    if (isOpen) {
+      setBookingDetails((prev) => ({
+        ...prev,
+        duration: initialDuration,
+      }));
+    }
+  }, [isOpen, initialDuration]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (!document.hidden && shouldRedirectOnReturn) {
         setShouldRedirectOnReturn(false);
-        
-        // Small delay to ensure user has settled back
+
         setTimeout(async () => {
-          const result = await showCustomAlert(`
+          const result = await showCustomAlert(
+            `
             <div class="text-center">
-              <h3 class="text-lg font-semibold mb-2">🎉 Selamat datang kembali!</h3>
+              <h3 class="text-lg font-semibold mb-2">Selamat datang kembali</h3>
               <p class="mb-4">Booking Anda sudah berhasil dibuat dengan status PENDING.</p>
               <p>Apakah Anda ingin melihat detail booking di dashboard?</p>
             </div>
-          `, '', 'success');
-          
+          `,
+            '',
+            'success'
+          );
+
           if (result.isConfirmed) {
             window.location.href = '/renter/bookings';
           }
@@ -66,35 +96,28 @@ export default function BookingModal({ kos, isOpen, onClose, onBookingCreated }:
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Calculate end date
+
     const startDate = new Date(bookingDetails.startDate);
     const endDate = new Date(startDate);
     endDate.setMonth(endDate.getMonth() + bookingDetails.duration);
-    
-    // Calculate total price
+
     const totalPrice = kos.price * bookingDetails.duration;
-    
+
     try {
-      // Create booking in database first
       const bookingData = {
         kosId: kos.id,
         checkInDate: bookingDetails.startDate,
         duration: bookingDetails.duration,
-        notes: bookingDetails.notes || undefined
+        notes: bookingDetails.notes || undefined,
       };
-      
+
       await createBookingMutation.mutateAsync(bookingData);
-      
-      console.log('Booking created successfully:', bookingData);
-      
-      // Call callback if provided
+
       if (onBookingCreated) {
         onBookingCreated();
       }
-      
+
       if (bookingDetails.contactMethod === 'whatsapp') {
-        // Create WhatsApp message
         const message = `Halo, saya tertarik untuk booking kos:
 
 *${kos.name}*
@@ -111,82 +134,79 @@ ${bookingDetails.notes ? `*Catatan:*\n${bookingDetails.notes}` : ''}
 
 Mohon informasi lebih lanjut untuk proses booking. Booking sudah dibuat di sistem dengan status pending. Terima kasih!`;
 
-        // Format phone number for WhatsApp (ensure it starts with country code)
         let ownerPhone = kos.owner?.contact || '6281234567890';
         if (ownerPhone.startsWith('0')) {
           ownerPhone = '62' + ownerPhone.substring(1);
         } else if (!ownerPhone.startsWith('62')) {
           ownerPhone = '62' + ownerPhone;
         }
-        
-        const whatsappUrl = `https://wa.me/${ownerPhone}?text=${encodeURIComponent(message)}`;
-        
-        // Open WhatsApp in new tab/window
+
+        const whatsappUrl = `https://wa.me/${ownerPhone}?text=${encodeURIComponent(
+          message
+        )}`;
         window.open(whatsappUrl, '_blank');
-        
-        // Set flag to redirect when user returns to this tab
+
         setShouldRedirectOnReturn(true);
-        
-        // Close modal immediately
         onClose();
-        
-        // Fallback: Show notification after some time if visibility API doesn't work
+
         setTimeout(async () => {
           if (shouldRedirectOnReturn) {
             setShouldRedirectOnReturn(false);
-            const result = await showCustomAlert(`
+            const result = await showCustomAlert(
+              `
               <div class="text-center">
-                <h3 class="text-lg font-semibold mb-2">✅ Booking berhasil dibuat dengan status PENDING!</h3>
+                <h3 class="text-lg font-semibold mb-2">Booking berhasil dibuat (PENDING)</h3>
                 <p class="mb-4">WhatsApp sudah terbuka di tab baru untuk menghubungi pemilik kos.</p>
                 <p>Apakah Anda ingin melihat booking Anda di dashboard?</p>
               </div>
-            `, '', 'success');
-            
+            `,
+              '',
+              'success'
+            );
+
             if (result.isConfirmed) {
               window.location.href = '/renter/bookings';
             }
           }
-        }, 5000); // 5 second fallback
-        
-        return; // Early return to avoid executing onClose again
+        }, 5000);
+
+        return;
       } else {
-        // Phone call
         const ownerPhone = kos.owner?.contact || '081234567890';
         window.open(`tel:${ownerPhone}`, '_self');
-        
-        // Close modal 
         onClose();
-        
-        // Show notification with option to go to bookings
+
         setTimeout(async () => {
-          const result = await showCustomAlert(`
+          const result = await showCustomAlert(
+            `
             <div class="text-center">
-              <h3 class="text-lg font-semibold mb-2">✅ Booking berhasil dibuat dengan status PENDING!</h3>
+              <h3 class="text-lg font-semibold mb-2">Booking berhasil dibuat (PENDING)</h3>
               <p class="mb-2">Panggilan telepon akan tersambung ke pemilik kos.</p>
               <div class="text-left bg-gray-50 p-3 rounded-lg mb-4">
                 <strong>Detail Booking:</strong><br>
-                • Kos: ${kos.name}<br>
-                • Tanggal Mulai: ${startDate.toLocaleDateString('id-ID')}<br>
-                • Durasi: ${bookingDetails.duration} bulan<br>
-                • Total: Rp ${totalPrice.toLocaleString()}
+                Kos: ${kos.name}<br>
+                Tanggal Mulai: ${startDate.toLocaleDateString('id-ID')}<br>
+                Durasi: ${bookingDetails.duration} bulan<br>
+                Total: Rp ${totalPrice.toLocaleString()}
               </div>
               <p>Apakah Anda ingin melihat booking Anda di dashboard?</p>
             </div>
-          `, '', 'success');
-          
+          `,
+            '',
+            'success'
+          );
+
           if (result.isConfirmed) {
             window.location.href = '/renter/bookings';
           }
         }, 1000);
       }
-      
     } catch (error) {
       console.error('Error creating booking:', error);
-      // More detailed error logging
-      if (error instanceof Error) {
-        console.error('Error message:', error.message);
-      }
-      showError('Gagal membuat booking. Silakan coba lagi. Error: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      showError(
+        'Gagal membuat booking. Silakan coba lagi. Error: ' +
+          (error instanceof Error ? error.message : 'Unknown error')
+      );
     }
   };
 
@@ -194,208 +214,255 @@ Mohon informasi lebih lanjut untuk proses booking. Booking sudah dibuat di siste
   const totalPrice = kos.price * bookingDetails.duration;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="booking-modal-title"
+      className="fixed inset-0 bg-[#181A18]/45 backdrop-blur-[2px] flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div
+        style={{ boxShadow: 'var(--shadow-float)' }}
+        className="bg-[var(--bg-surface)] border border-[var(--border-stone)] rounded-[20px] max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-gray-800">Booking Kos</h2>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 text-2xl"
+        <div className="p-5 sm:p-6 border-b border-[var(--border-stone)] flex items-center justify-between gap-4">
+          <div>
+            <h2
+              id="booking-modal-title"
+              className="text-xl sm:text-2xl font-bold text-[var(--ink-primary)] tracking-[-0.02em]"
             >
-              ×
-            </button>
+              Ajukan Booking Kos
+            </h2>
+            <p className="text-xs sm:text-sm text-[var(--ink-secondary)] mt-0.5">
+              Lengkapi tanggal masuk dan durasi sewa untuk diteruskan ke
+              pemilik kos.
+            </p>
           </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Tutup dialog booking"
+            className="w-9 h-9 rounded-[10px] border border-[var(--border-stone)] flex items-center justify-center text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] hover:bg-[var(--bg-canvas)] cursor-pointer shrink-0"
+          >
+            <svg
+              className="w-4 h-4"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.75}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
+          </button>
         </div>
 
         {/* Content */}
-        <div className="p-6">
-          {/* Kos Info */}
-          <div className="bg-gray-50 rounded-lg p-4 mb-6">
-            <h3 className="font-semibold text-lg text-gray-800 mb-2">{kos.name}</h3>
-            <p className="text-gray-600 text-sm mb-2">{kos.address}, {kos.city}</p>
-            <div className="flex items-center justify-between">
-              <p className="text-blue-600 font-bold text-lg">Rp {kos.price.toLocaleString()}/bulan</p>
-              {kos.owner && (
-                <div className="text-right">
-                  <p className="text-xs text-gray-500">Pemilik:</p>
-                  <p className="text-sm font-medium text-gray-700">{kos.owner.fullName}</p>
-                </div>
-              )}
+        <div className="p-5 sm:p-6 space-y-6">
+          {/* Kos Summary */}
+          <div className="bg-[var(--bg-canvas)] border border-[var(--border-stone)] rounded-[14px] p-4 space-y-2">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <h3 className="font-bold text-base text-[var(--ink-primary)]">
+                  {kos.name}
+                </h3>
+                <p className="text-xs sm:text-sm text-[var(--ink-secondary)]">
+                  {kos.address}, {kos.city}
+                </p>
+              </div>
+              <div className="font-mono-tabular text-base font-bold text-[var(--accent-primary)]">
+                {formatRupiah(kos.price)}/bln
+              </div>
             </div>
-            {kos.averageRating && parseFloat(kos.averageRating) > 0 && (
-              <div className="flex items-center mt-2">
-                <span className="text-yellow-400 mr-1">★</span>
-                <span className="text-sm text-gray-600">
-                  {parseFloat(kos.averageRating).toFixed(1)} ({kos.reviewCount} ulasan)
+            {kos.owner && (
+              <div className="text-xs text-[var(--ink-secondary)] pt-1 border-t border-[var(--border-stone)]">
+                Pemilik:{' '}
+                <span className="font-semibold text-[var(--ink-primary)]">
+                  {kos.owner.fullName}
                 </span>
               </div>
             )}
           </div>
 
-          {/* Facilities Preview */}
-          {kos.facilities && (
-            <div className="mb-6">
-              <h4 className="font-medium text-gray-800 mb-2">Fasilitas Tersedia:</h4>
-              <div className="flex flex-wrap gap-2">
-                {kos.facilities.split(',').slice(0, 6).map((facility, index) => (
-                  <span
-                    key={index}
-                    className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full"
-                  >
-                    {facility.trim()}
-                  </span>
-                ))}
-                {kos.facilities.split(',').length > 6 && (
-                  <span className="text-xs text-gray-500 px-2 py-1">
-                    +{kos.facilities.split(',').length - 6} lainnya
-                  </span>
-                )}
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label
+                  htmlFor="booking-start-date"
+                  className="block text-xs sm:text-sm font-semibold text-[var(--ink-primary)] mb-1.5"
+                >
+                  Tanggal Mulai Sewa
+                </label>
+                <input
+                  id="booking-start-date"
+                  type="date"
+                  min={minDate}
+                  value={bookingDetails.startDate}
+                  onChange={(e) =>
+                    setBookingDetails({
+                      ...bookingDetails,
+                      startDate: e.target.value,
+                    })
+                  }
+                  className="font-mono-tabular w-full px-3.5 py-2.5 rounded-[10px] border border-[var(--border-stone)] bg-[var(--bg-canvas)] text-sm text-[var(--ink-primary)] focus:bg-[var(--bg-surface)] focus:border-[var(--accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]/20"
+                  required
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="booking-duration"
+                  className="block text-xs sm:text-sm font-semibold text-[var(--ink-primary)] mb-1.5"
+                >
+                  Durasi Sewa
+                </label>
+                <select
+                  id="booking-duration"
+                  value={bookingDetails.duration}
+                  onChange={(e) =>
+                    setBookingDetails({
+                      ...bookingDetails,
+                      duration: parseInt(e.target.value, 10),
+                    })
+                  }
+                  className="font-mono-tabular w-full px-3.5 py-2.5 rounded-[10px] border border-[var(--border-stone)] bg-[var(--bg-canvas)] text-sm text-[var(--ink-primary)] focus:bg-[var(--bg-surface)] focus:border-[var(--accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]/20 cursor-pointer"
+                  required
+                >
+                  <option value={1}>1 Bulan</option>
+                  <option value={2}>2 Bulan</option>
+                  <option value={3}>3 Bulan</option>
+                  <option value={6}>6 Bulan</option>
+                  <option value={12}>12 Bulan</option>
+                </select>
               </div>
             </div>
-          )}
 
-          {/* Booking Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Start Date */}
+            {/* Contact Method Radio Cards */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tanggal Mulai Sewa
-              </label>
-              <input
-                type="date"
-                min={minDate}
-                value={bookingDetails.startDate}
-                onChange={(e) => setBookingDetails({
-                  ...bookingDetails,
-                  startDate: e.target.value
+              <span className="block text-xs sm:text-sm font-semibold text-[var(--ink-primary)] mb-2">
+                Metode Hubungi Pemilik
+              </span>
+              <div className="grid grid-cols-2 gap-3">
+                {(
+                  [
+                    { value: 'whatsapp', label: 'WhatsApp' },
+                    { value: 'phone', label: 'Telepon' },
+                  ] as const
+                ).map((method) => {
+                  const selected =
+                    bookingDetails.contactMethod === method.value;
+                  return (
+                    <label
+                      key={method.value}
+                      className={`flex items-center gap-2.5 px-4 py-3 rounded-[10px] border text-sm font-medium cursor-pointer transition-colors ${
+                        selected
+                          ? 'bg-[var(--accent-tint)] border-[var(--accent-primary)] text-[var(--accent-primary)] font-semibold'
+                          : 'bg-[var(--bg-canvas)] border-[var(--border-stone)] text-[var(--ink-primary)] hover:border-[var(--ink-secondary)]'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="contactMethod"
+                        value={method.value}
+                        checked={selected}
+                        onChange={(e) =>
+                          setBookingDetails({
+                            ...bookingDetails,
+                            contactMethod: e.target.value as
+                              | 'whatsapp'
+                              | 'phone',
+                          })
+                        }
+                        className="accent-[var(--accent-primary)]"
+                      />
+                      <span>{method.label}</span>
+                    </label>
+                  );
                 })}
-                className="w-full px-3 py-2 border text-gray-500 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                required
-              />
-            </div>
-
-            {/* Duration */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Durasi Sewa
-              </label>
-              <select
-                value={bookingDetails.duration}
-                onChange={(e) => setBookingDetails({
-                  ...bookingDetails,
-                  duration: parseInt(e.target.value)
-                })}
-                className="w-full px-3 py-2 border text-gray-500 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                required
-              >
-                <option value={1}>1 Bulan</option>
-                <option value={2}>2 Bulan</option>
-                <option value={3}>3 Bulan</option>
-                <option value={6}>6 Bulan</option>
-                <option value={12}>12 Bulan</option>
-              </select>
-            </div>
-
-            {/* Contact Method */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Metode Kontak
-              </label>
-              <div className="flex space-x-4">
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    value="whatsapp"
-                    checked={bookingDetails.contactMethod === 'whatsapp'}
-                    onChange={(e) => setBookingDetails({
-                      ...bookingDetails,
-                      contactMethod: e.target.value as 'whatsapp'
-                    })}
-                    className="mr-2"
-                  />
-                  <span className="text-sm text-gray-500">WhatsApp</span>
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    value="phone"
-                    checked={bookingDetails.contactMethod === 'phone'}
-                    onChange={(e) => setBookingDetails({
-                      ...bookingDetails,
-                      contactMethod: e.target.value as 'phone'
-                    })}
-                    className="mr-2"
-                  />
-                  <span className="text-sm text-gray-500">Telepon</span>
-                </label>
               </div>
             </div>
 
             {/* Notes */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="booking-notes"
+                className="block text-xs sm:text-sm font-semibold text-[var(--ink-primary)] mb-1.5"
+              >
                 Catatan (Opsional)
               </label>
               <textarea
+                id="booking-notes"
                 value={bookingDetails.notes}
-                onChange={(e) => setBookingDetails({
-                  ...bookingDetails,
-                  notes: e.target.value
-                })}
+                onChange={(e) =>
+                  setBookingDetails({
+                    ...bookingDetails,
+                    notes: e.target.value,
+                  })
+                }
                 rows={3}
                 placeholder="Tambahkan catatan atau pertanyaan khusus..."
-                className="w-full text-gray-500 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3.5 py-2.5 rounded-[10px] border border-[var(--border-stone)] bg-[var(--bg-canvas)] text-sm text-[var(--ink-primary)] placeholder:text-[var(--ink-secondary)]/75 focus:bg-[var(--bg-surface)] focus:border-[var(--accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]/20"
               />
             </div>
 
-            {/* Summary */}
-            <div className="bg-blue-50 rounded-lg p-4">
-              <h4 className="font-semibold text-gray-800 mb-3">Ringkasan Booking</h4>
-              <div className="space-y-2 text-sm">
+            {/* Price Summary */}
+            <div className="bg-[var(--bg-canvas)] border border-[var(--border-stone)] rounded-[14px] p-4 space-y-2.5">
+              <h4 className="text-sm font-bold text-[var(--ink-primary)]">
+                Ringkasan Biaya
+              </h4>
+              <div className="space-y-1.5 text-xs sm:text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Harga per bulan:</span>
-                  <span className="font-medium text-gray-500">Rp {kos.price.toLocaleString()}</span>
+                  <span className="text-[var(--ink-secondary)]">
+                    Harga per bulan
+                  </span>
+                  <span className="font-mono-tabular font-medium text-[var(--ink-primary)]">
+                    {formatRupiah(kos.price)}
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Durasi:</span>
-                  <span className="font-medium text-gray-500">{bookingDetails.duration} bulan</span>
+                  <span className="text-[var(--ink-secondary)]">Durasi</span>
+                  <span className="font-mono-tabular font-medium text-[var(--ink-primary)]">
+                    {bookingDetails.duration} bulan
+                  </span>
                 </div>
-                <div className="border-t border-blue-200 pt-2 mt-2">
-                  <div className="flex justify-between">
-                    <span className="text-gray-800 font-semibold">Total Biaya:</span>
-                    <span className="font-bold text-blue-600">Rp {totalPrice.toLocaleString()}</span>
-                  </div>
+                <div className="pt-2 border-t border-[var(--border-stone)] flex justify-between items-baseline">
+                  <span className="font-bold text-[var(--ink-primary)]">
+                    Total Estimasi
+                  </span>
+                  <span className="font-mono-tabular text-lg font-bold text-[var(--accent-primary)]">
+                    {formatRupiah(totalPrice)}
+                  </span>
                 </div>
               </div>
             </div>
 
             {/* Actions */}
-            <div className="flex space-x-4">
+            <div className="flex items-center gap-3 pt-1">
               <button
                 type="button"
                 onClick={onClose}
                 disabled={createBookingMutation.isPending}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 py-2.5 px-4 rounded-[10px] text-sm font-semibold border border-[var(--border-stone)] bg-[var(--bg-surface)] text-[var(--ink-primary)] hover:border-[var(--ink-secondary)] transition-colors disabled:opacity-50 cursor-pointer"
               >
                 Batal
               </button>
               <button
                 type="submit"
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={!bookingDetails.startDate || createBookingMutation.isPending}
+                disabled={
+                  !bookingDetails.startDate || createBookingMutation.isPending
+                }
+                className="flex-1 py-2.5 px-4 rounded-[10px] text-sm font-semibold bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-primary-hover)] transition-colors disabled:opacity-45 disabled:cursor-not-allowed cursor-pointer"
               >
-                {createBookingMutation.isPending ? (
-                  <div className="flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Membuat Booking...
-                  </div>
-                ) : (
-                  bookingDetails.contactMethod === 'whatsapp' 
-                    ? 'Hubungi via WhatsApp' 
-                    : 'Hubungi via Telepon'
-                )}
+                {createBookingMutation.isPending
+                  ? 'Membuat Booking...'
+                  : bookingDetails.contactMethod === 'whatsapp'
+                    ? 'Lanjut via WhatsApp'
+                    : 'Hubungi via Telepon'}
               </button>
             </div>
           </form>
